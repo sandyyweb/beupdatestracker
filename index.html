@@ -1,0 +1,297 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Boxedge – Reels & Posts Dashboard</title>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js"></script>
+<style>
+:root{--yellow:#ffff00;--plum:#4a1530;--green:#38761d;--blue:#1a73e8;--red:#ff0000;--grey:#b7b7b7;--line:#222;--bg:#f4f4f4}
+*{box-sizing:border-box}
+body{margin:0;font-family:Arial,Helvetica,sans-serif;background:var(--bg);color:#111}
+.hidden{display:none!important}
+button,input,select{font:inherit}
+button{cursor:pointer}
+
+/* login */
+#login{max-width:340px;margin:12vh auto;background:#fff;padding:28px;border:1px solid var(--line)}
+#login h1{margin:0 0 4px;font-size:22px}
+#login p{margin:0 0 18px;color:#555;font-size:14px}
+#login input{width:100%;padding:10px;margin-bottom:10px;border:1px solid #888}
+.primary{background:var(--plum);color:#fff;border:0;padding:10px 16px;font-weight:bold}
+#login .primary{width:100%}
+.err{color:#b00020;font-size:13px;min-height:18px;margin-top:8px}
+
+/* header */
+.top{background:var(--yellow);display:flex;align-items:center;justify-content:space-between;gap:12px;padding:10px 16px;flex-wrap:wrap}
+.brand{font-weight:bold;font-size:20px;letter-spacing:.5px}
+.stamp{font-weight:bold;font-size:14px}
+.title{background:var(--yellow);text-align:center;font-weight:bold;font-size:18px;padding:6px 0 14px;border-top:1px solid #e5e500}
+.bar{display:flex;gap:10px;align-items:center;flex-wrap:wrap;padding:12px 16px;background:#fff;border-bottom:1px solid #ccc}
+.bar select,.bar input{padding:7px;border:1px solid #888;background:#fff}
+.bar .sp{flex:1}
+.ghost{background:#fff;border:1px solid #333;padding:7px 12px}
+
+/* table */
+.wrap{overflow-x:auto;padding:16px}
+table{border-collapse:collapse;width:100%;min-width:900px;background:#fff}
+th,td{border:1px solid var(--line);padding:9px 8px;text-align:center;font-size:15px}
+th{color:#fff;font-size:15px}
+th.biz,th.mgr{background:var(--plum)}
+th.main{background:var(--green)}
+th.zom{background:var(--red)}
+td.name{color:#fff;font-weight:bold}
+td.blue{background:var(--blue)}
+td.red{background:var(--red)}
+td.mgr{font-weight:bold}
+td.none{background:var(--grey);font-weight:bold}
+td.stale{background:#ffd9d9;color:#a00000;font-weight:bold}
+td.act{white-space:nowrap;width:1%}
+.mini{border:1px solid #333;background:#fff;padding:4px 9px;margin:0 2px;font-size:13px}
+.mini.add{background:var(--green);color:#fff;border-color:var(--green);font-weight:bold}
+.empty{padding:40px;text-align:center;color:#555}
+
+/* dialogs */
+dialog{border:1px solid #222;padding:22px;width:min(380px,92vw)}
+dialog::backdrop{background:rgba(0,0,0,.45)}
+dialog h2{margin:0 0 14px;font-size:18px}
+dialog label{display:block;font-size:13px;margin:10px 0 4px;font-weight:bold}
+dialog input,dialog select{width:100%;padding:9px;border:1px solid #888}
+dialog .row{display:flex;gap:8px;justify-content:flex-end;margin-top:18px}
+.toast{position:fixed;bottom:18px;left:50%;transform:translateX(-50%);background:#111;color:#fff;padding:10px 16px;font-size:14px}
+</style>
+</head>
+<body>
+
+<!-- LOGIN -->
+<div id="login">
+  <h1>Reels & posts dashboard</h1>
+  <p>Sign in to view and update posts.</p>
+  <input id="email" type="email" placeholder="Email" autocomplete="username">
+  <input id="password" type="password" placeholder="Password" autocomplete="current-password">
+  <button class="primary" id="loginBtn">Sign in</button>
+  <div class="err" id="loginErr"></div>
+</div>
+
+<!-- APP -->
+<div id="app" class="hidden">
+  <div class="top">
+    <div class="brand">BOXEDGE</div>
+    <div class="stamp">Sheet last updated: <span id="stamp">–</span></div>
+  </div>
+  <div class="title" id="title">Reels & Posts Update</div>
+  <div class="bar">
+    <label>Month <input type="month" id="month"></label>
+    <select id="mgrFilter"><option value="">All managers</option></select>
+    <span class="sp"></span>
+    <button class="ghost" id="addAccBtn">+ Add account</button>
+    <button class="ghost" id="logoutBtn">Sign out</button>
+  </div>
+  <div class="wrap">
+    <table>
+      <thead>
+        <tr>
+          <th class="biz">Business name</th>
+          <th class="main">Last post</th>
+          <th class="main" id="thTotal">Total posts</th>
+          <th class="zom">Zomato last post</th>
+          <th class="zom" id="thZTotal">Zomato total</th>
+          <th class="mgr">Account manager</th>
+          <th class="biz">Update</th>
+        </tr>
+      </thead>
+      <tbody id="rows"></tbody>
+    </table>
+    <div class="empty hidden" id="empty">No accounts yet. Use “+ Add account” to start.</div>
+  </div>
+</div>
+
+<!-- ADD POST -->
+<dialog id="postDlg">
+  <h2 id="postTitle">Add post</h2>
+  <div id="chanWrap">
+    <label for="postChan">Platform</label>
+    <select id="postChan"><option value="main">Main account</option><option value="zomato">Zomato</option></select>
+  </div>
+  <label for="postDate">Post date</label>
+  <input type="date" id="postDate">
+  <label for="postCount">Number of posts</label>
+  <input type="number" id="postCount" min="1" max="50" value="1">
+  <div class="row"><button class="ghost" id="postCancel">Cancel</button><button class="primary" id="postSave">Save post</button></div>
+</dialog>
+
+<!-- ADD ACCOUNT -->
+<dialog id="accDlg">
+  <h2>Add account</h2>
+  <label for="accName">Business name</label>
+  <input id="accName" placeholder="e.g. Koi Kitchen">
+  <label for="accGrp">Colour group</label>
+  <select id="accGrp"><option value="blue">Blue (main social accounts)</option><option value="red">Red (YouTube, Pinterest, etc.)</option></select>
+  <label for="accMgr">Account manager</label>
+  <input id="accMgr" placeholder="e.g. Tanvi">
+  <label for="accZom">Zomato</label>
+  <select id="accZom"><option value="false">No Zomato</option><option value="true">Has Zomato</option></select>
+  <div class="row"><button class="ghost" id="accCancel">Cancel</button><button class="primary" id="accSave">Save account</button></div>
+</dialog>
+
+<script>
+// ====== 1. PASTE YOUR SUPABASE DETAILS HERE ======
+const SUPABASE_URL = "https://gmhjpqikrtrvjrfedhpp.supabase.co";
+const SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImdtaGpwcWlrcnRydmpyZmVkaHBwIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTI2NDQyNDEsImV4cCI6MjEwODIyMDI0MX0.ICbBU_gFLUSyWxdXdruc4V3LppOMGbuMtlI4SqCiRx0";
+// =================================================
+
+const STALE_DAYS = 7; // highlight last-post dates older than this
+const db = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+const $ = id => document.getElementById(id);
+const esc = s => String(s ?? "").replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+const iso = d => new Date(d.getTime() - d.getTimezoneOffset() * 60000).toISOString().slice(0, 10);
+const fmt = s => new Date(s + "T00:00:00").toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" });
+
+let accounts = [], posts = [], stampTime = null, target = null;
+
+function toast(msg) {
+  const t = document.createElement("div");
+  t.className = "toast"; t.textContent = msg;
+  document.body.appendChild(t); setTimeout(() => t.remove(), 2200);
+}
+
+// ---------- auth ----------
+async function init() {
+  const { data } = await db.auth.getSession();
+  data.session ? showApp() : showLogin();
+}
+function showLogin() { $("login").classList.remove("hidden"); $("app").classList.add("hidden"); }
+async function showApp() {
+  $("login").classList.add("hidden"); $("app").classList.remove("hidden");
+  if (!$("month").value) $("month").value = iso(new Date()).slice(0, 7);
+  await load();
+}
+$("loginBtn").onclick = async () => {
+  $("loginErr").textContent = "";
+  const { error } = await db.auth.signInWithPassword({ email: $("email").value.trim(), password: $("password").value });
+  error ? $("loginErr").textContent = error.message : showApp();
+};
+$("password").addEventListener("keydown", e => { if (e.key === "Enter") $("loginBtn").click(); });
+$("logoutBtn").onclick = async () => { await db.auth.signOut(); showLogin(); };
+
+// ---------- data ----------
+async function load() {
+  const [a, p] = await Promise.all([
+    db.from("accounts").select("*").order("sort_order").order("created_at"),
+    db.from("posts").select("account_id,channel,post_date,created_at")
+  ]);
+  if (a.error || p.error) { toast((a.error || p.error).message); return; }
+  accounts = a.data; posts = p.data;
+  stampTime = posts.reduce((m, x) => (!m || x.created_at > m ? x.created_at : m), null);
+  render();
+}
+
+function stats(accId, channel, month) {
+  const list = posts.filter(x => x.account_id === accId && x.channel === channel);
+  const last = list.reduce((m, x) => (!m || x.post_date > m ? x.post_date : m), null);
+  const total = list.filter(x => x.post_date.startsWith(month)).length;
+  return { last, total };
+}
+
+function render() {
+  const month = $("month").value;
+  const [y, m] = month.split("-");
+  const label = new Date(+y, +m - 1, 1).toLocaleDateString("en-GB", { month: "short", year: "numeric" });
+  $("title").textContent = `${label} (Reels & Posts Update)`;
+  $("thTotal").textContent = `Total ${label.split(" ")[0]} posts`;
+  $("thZTotal").textContent = `Zomato ${label.split(" ")[0]} posts`;
+  $("stamp").textContent = stampTime ? new Date(stampTime).toLocaleString("en-GB", { day: "2-digit", month: "long", year: "numeric", hour: "2-digit", minute: "2-digit", second: "2-digit" }) : "–";
+
+  // manager filter
+  const mgrs = [...new Set(accounts.map(a => a.manager).filter(Boolean))].sort();
+  const cur = $("mgrFilter").value;
+  $("mgrFilter").innerHTML = '<option value="">All managers</option>' + mgrs.map(x => `<option ${x === cur ? "selected" : ""}>${esc(x)}</option>`).join("");
+
+  const list = accounts.filter(a => !$("mgrFilter").value || a.manager === $("mgrFilter").value);
+  $("empty").classList.toggle("hidden", accounts.length > 0);
+  const limit = new Date(); limit.setDate(limit.getDate() - STALE_DAYS);
+  const staleBefore = iso(limit);
+
+  $("rows").innerHTML = list.map(a => {
+    const s = stats(a.id, "main", month);
+    const z = stats(a.id, "zomato", month);
+    const lastCls = !s.last || s.last < staleBefore ? "stale" : "";
+    const zCells = a.has_zomato
+      ? `<td>${z.last ? fmt(z.last) : "–"}</td><td>${z.total}</td>`
+      : `<td class="none">No Zomato</td><td class="none"></td>`;
+    return `<tr>
+      <td class="name ${a.grp === "red" ? "red" : "blue"}">${esc(a.name)}</td>
+      <td class="${lastCls}">${s.last ? fmt(s.last) : "No posts yet"}</td>
+      <td>${s.total}</td>
+      ${zCells}
+      <td class="mgr">${esc(a.manager)}</td>
+      <td class="act">
+        <button class="mini add" data-add="${a.id}">+ Post</button>
+        <button class="mini" data-undo="${a.id}" title="Delete latest post">Undo</button>
+        <button class="mini" data-del="${a.id}" title="Delete account">✕</button>
+      </td></tr>`;
+  }).join("");
+}
+$("month").onchange = render;
+$("mgrFilter").onchange = render;
+
+// ---------- row actions ----------
+$("rows").addEventListener("click", async e => {
+  const b = e.target.closest("button"); if (!b) return;
+  if (b.dataset.add) {
+    target = accounts.find(a => a.id === b.dataset.add);
+    $("postTitle").textContent = `Add post – ${target.name}`;
+    $("chanWrap").classList.toggle("hidden", !target.has_zomato);
+    $("postChan").value = "main";
+    $("postDate").value = iso(new Date());
+    $("postCount").value = 1;
+    $("postDlg").showModal();
+  } else if (b.dataset.undo) {
+    const acc = accounts.find(a => a.id === b.dataset.undo);
+    const mine = posts.filter(p => p.account_id === acc.id).sort((x, y) => (y.created_at > x.created_at ? 1 : -1));
+    if (!mine.length) return toast("Nothing to undo");
+    const last = mine[0];
+    if (!confirm(`Delete the latest entry for ${acc.name} (${fmt(last.post_date)})?`)) return;
+    const { error } = await db.from("posts").delete().eq("account_id", acc.id).eq("created_at", last.created_at);
+    error ? toast(error.message) : (toast("Post removed"), load());
+  } else if (b.dataset.del) {
+    const acc = accounts.find(a => a.id === b.dataset.del);
+    if (!confirm(`Delete ${acc.name} and all its posts?`)) return;
+    const { error } = await db.from("accounts").delete().eq("id", acc.id);
+    error ? toast(error.message) : (toast("Account deleted"), load());
+  }
+});
+
+// ---------- add post ----------
+$("postCancel").onclick = () => $("postDlg").close();
+$("postSave").onclick = async () => {
+  const n = Math.max(1, Math.min(50, +$("postCount").value || 1));
+  if (!$("postDate").value) return toast("Pick a date");
+  const rows = Array.from({ length: n }, () => ({
+    account_id: target.id,
+    channel: target.has_zomato ? $("postChan").value : "main",
+    post_date: $("postDate").value
+  }));
+  const { error } = await db.from("posts").insert(rows);
+  if (error) return toast(error.message);
+  $("postDlg").close(); toast("Post saved"); load();
+};
+
+// ---------- add account ----------
+$("addAccBtn").onclick = () => { $("accName").value = ""; $("accMgr").value = ""; $("accDlg").showModal(); };
+$("accCancel").onclick = () => $("accDlg").close();
+$("accSave").onclick = async () => {
+  const name = $("accName").value.trim();
+  if (!name) return toast("Enter a business name");
+  const { error } = await db.from("accounts").insert({
+    name, grp: $("accGrp").value, manager: $("accMgr").value.trim(),
+    has_zomato: $("accZom").value === "true", sort_order: accounts.length
+  });
+  if (error) return toast(error.message);
+  $("accDlg").close(); toast("Account added"); load();
+};
+
+init();
+</script>
+</body>
+</html>
