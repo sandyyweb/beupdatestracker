@@ -1,0 +1,2595 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<link rel="icon" type="image/png" href="be-favicon.png">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
+<title>Boxedge Updates Tracker</title>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js"></script>
+<style>
+:root{--yellow:#ffff00;--plum:#4a1530;--green:#38761d;--blue:#1a73e8;--red:#ff0000;--grey:#b7b7b7;--line:#222;--bg:#f4f4f4}
+*{box-sizing:border-box}
+body{margin:0;font-family:Arial,Helvetica,sans-serif;background:var(--bg);color:#111}
+.hidden{display:none!important}
+button,input,select{font:inherit}
+button{cursor:pointer}
+
+/* login */
+#login{max-width:380px;margin:12vh auto;padding:36px;border:1px solid #26262e;border-radius:16px;color:#fff;
+  background:linear-gradient(90deg,#00f5b0,#4a1530 70%,#9b0000) top/100% 3px no-repeat,#0e0e12;
+  box-shadow:0 30px 80px rgba(0,0,0,.55),0 0 0 1px rgba(255,255,255,.03) inset;overflow:hidden;animation:loginIn .6s ease both}
+/* elegant full-screen backdrop (only while the login card is visible) */
+body:has(#login:not(.hidden)){background:
+    radial-gradient(60vmax 60vmax at 12% 8%,rgba(0,245,176,.16),transparent 60%),
+    radial-gradient(55vmax 55vmax at 92% 95%,rgba(122,24,74,.55),transparent 62%),
+    radial-gradient(40vmax 40vmax at 85% 5%,rgba(155,0,0,.22),transparent 60%),
+    linear-gradient(160deg,#050507 0%,#0b0a10 55%,#14081a 100%);background-attachment:fixed}
+body:has(#login:not(.hidden))::after{content:"";position:fixed;inset:0;z-index:-1;pointer-events:none;opacity:.5;
+  background-image:radial-gradient(rgba(255,255,255,.09) 1px,transparent 1.2px);background-size:26px 26px;
+  -webkit-mask-image:radial-gradient(ellipse at center,#000 20%,transparent 75%);mask-image:radial-gradient(ellipse at center,#000 20%,transparent 75%)}
+#login .brand{margin:-36px -36px 26px;padding:26px 0 22px;justify-content:center;background:#000;border-bottom:1px solid #1d1d24}
+#login .brand img{height:62px}
+#login h1{margin:0 0 6px;font-size:22px;font-weight:700;letter-spacing:.2px}
+#login p{margin:0 0 22px;color:#9a9aa6;font-size:14px}
+#login input{width:100%;padding:12px 14px;margin-bottom:12px;color:#fff;background:#16161c;border:1px solid #2c2c36;border-radius:10px;outline:0;transition:border-color .2s,box-shadow .2s}
+#login input::placeholder{color:#6d6d7a}
+#login input:focus{border-color:#00f5b0;box-shadow:0 0 0 3px rgba(0,245,176,.15)}
+#login input:-webkit-autofill{-webkit-text-fill-color:#fff;box-shadow:0 0 0 40px #16161c inset}
+@keyframes loginIn{from{opacity:0;transform:translateY(14px)}to{opacity:1;transform:none}}
+@media (prefers-reduced-motion:reduce){#login{animation:none}}
+.primary{background:var(--plum);color:#fff;border:0;padding:10px 16px;font-weight:bold}
+#login .primary{width:100%;margin-top:4px;padding:12px 16px;border-radius:10px;background:#00f5b0;color:#050507;letter-spacing:.3px;transition:filter .2s,transform .1s}
+#login .primary:hover{filter:brightness(1.08)}
+#login .primary:active{transform:translateY(1px)}
+.err{color:#b00020;font-size:13px;min-height:18px;margin-top:8px}
+#login .err{color:#ff6b81}
+
+/* header */
+.top{background:#000;color:#fff;display:flex;align-items:center;justify-content:space-between;gap:12px;padding:10px 16px;flex-wrap:wrap}
+.brand{background:#000;padding:4px 0;display:flex;align-items:center}
+.brand img{height:60px;width:auto;display:block}
+.print-logo{display:none}
+.stamp{font-weight:bold;font-size:14px;color:#02FEBB}
+@media screen and (min-width:821px){.top{min-height:36px}}
+.title{background:#000;color:#fff;text-align:center;font-weight:bold;font-size:24px;padding:6px 0 14px}
+.bar{display:flex;gap:10px;align-items:center;flex-wrap:wrap;padding:12px 16px;background:#fff;border-bottom:1px solid #ccc}
+.bar select,.bar input{padding:7px;border:1px solid #888;background:#fff}
+.bar .sp{flex:1}
+.ghost{background:#fff;border:1px solid #333;padding:7px 12px}
+
+/* layout + sidebar */
+#app{display:flex;min-height:100vh}
+.side{width:230px;flex:none;background:#000;color:#fff;display:flex;flex-direction:column;position:sticky;top:0;height:100vh}
+.side .brand{padding:18px 16px;justify-content:center;border-bottom:1px solid #2a2a2a}
+.side nav{padding:12px 0}
+.nav{display:block;width:100%;text-align:left;background:none;border:0;border-left:4px solid transparent;color:#ddd;padding:13px 20px;font-size:15px}
+.nav:hover{background:#1a1a1a}
+.nav.on{background:#1a1a1a;color:#02FEBB;border-left-color:#02FEBB;font-weight:bold}
+#logoutBtn,#logoutBtn:hover{background:#02FEBB;color:#000;border-left-color:#02FEBB}
+.main{flex:1;min-width:0}
+.menu{display:none;background:none;border:1px solid #777;color:#fff;font-size:20px;padding:2px 10px}
+.mtitle{display:none;font-weight:bold}
+.overlay{display:none}
+.stamp{margin-left:auto}
+td input{width:100%;min-width:150px;padding:7px;border:1px solid #bbb;font-size:14px}
+tr.tot td{background:#000;color:#fff;font-weight:bold}
+/* table */
+.wrap{overflow-x:auto;padding:16px}
+table{border-collapse:collapse;width:100%;min-width:900px;background:#fff}
+th,td{border:1px solid var(--line);padding:9px 8px;text-align:center;font-size:15px}
+th{color:#fff;font-size:15px}
+th.biz,th.mgr{background:var(--plum)}
+th.main{background:var(--green)}
+th.zom{background:var(--red)}
+td.name{color:#fff;font-weight:bold}
+td.blue{background:var(--blue)}
+td.red{background:var(--red)}
+td.g-pinterest{background:#BD081C}
+td.g-thread{background:#5B51D8}
+td.g-telegram{background:#146EBE}
+td.g-youtube{background:#FF0033}
+td.g-linkedin{background:#0A66C2}
+td.g-instagram{background:#B5175B}
+td.g-facebook{background:#1877F2}
+td.g-gmb{background:#4285F4}
+td.mgr{font-weight:bold}
+td.none{background:var(--grey);font-weight:bold}
+td.stale{background:#ffd9d9;color:#a00000;font-weight:bold}
+td.act{white-space:nowrap;width:1%}
+#pagePosts th,#pageBoost th,#pageTeam th{background:#990000}
+.mini{border:1px solid #333;background:#fff;padding:4px 9px;margin:0 2px;font-size:13px}
+.mini.add{background:var(--green);color:#fff;border-color:var(--green);font-weight:bold}
+.empty{padding:40px;text-align:center;color:#555}
+
+/* dialogs */
+dialog{border:1px solid #222;padding:22px;width:min(380px,92vw)}
+dialog::backdrop{background:rgba(0,0,0,.45)}
+dialog h2{margin:0 0 14px;font-size:18px}
+dialog label{display:block;font-size:13px;margin:10px 0 4px;font-weight:bold}
+dialog input,dialog select{width:100%;padding:9px;border:1px solid #888}
+dialog .row{display:flex;gap:8px;justify-content:flex-end;margin-top:18px}
+.side nav{flex:1}
+.who{display:flex;align-items:center;gap:10px;padding:14px 16px;border-bottom:1px solid #2a2a2a}
+.av{width:38px;height:38px;border-radius:50%;background:#02FEBB;color:#000;font-weight:bold;display:flex;align-items:center;justify-content:center;flex:none}
+.av i{font-size:18px}
+#logoutBtn{font-weight:bold}
+#logoutBtn i{margin-right:8px}
+.wn{font-weight:bold;font-size:15px;word-break:break-word}
+.wr{font-size:12px;color:#aaa}
+.viewer #addAccBtn{display:none!important}
+.teambox{background:#fff;border:1px solid var(--line);padding:16px;margin-bottom:16px;max-width:900px}
+.teambox h2{margin:0 0 6px;font-size:18px}
+.teambox p{margin:0 0 12px;color:#555;font-size:14px}
+.tmform{display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:8px}
+.tmform input{padding:9px;border:1px solid #888;min-width:0}
+/* ===== responsive (kept after the base rules so it can override them) ===== */
+html{-webkit-text-size-adjust:100%}
+button{touch-action:manipulation}
+@media screen and (max-width:1200px){
+  table{min-width:720px}
+  th,td{font-size:14px;padding:8px 6px}
+  .mini{padding:4px 7px}
+}
+/* tablets and below: sidebar becomes a slide-out menu */
+@media screen and (max-width:1000px){
+  .side{position:fixed;left:0;top:0;height:100dvh;width:min(280px,82vw);z-index:20;transform:translateX(-100%);transition:transform .2s;padding-top:env(safe-area-inset-top)}
+  .side.open{transform:none;box-shadow:4px 0 18px rgba(0,0,0,.4)}
+  .overlay.show{display:block;position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:15}
+  .menu,.mtitle{display:block}
+  .menu{min-width:44px;min-height:40px}
+  .top{position:sticky;top:0;z-index:10;padding:8px 12px;padding-top:calc(8px + env(safe-area-inset-top));padding-left:calc(12px + env(safe-area-inset-left));padding-right:calc(12px + env(safe-area-inset-right))}
+  .stamp{font-size:12px}
+  .mx-strip .y,.gx-strip .y{font-size:12px}
+}
+/* phones and small tablets: each account becomes a card */
+@media screen and (max-width:820px){
+  .print-logo{display:block;height:30px;width:auto}
+  .mtitle{display:none}
+  .top{gap:10px}
+  .stamp{flex:1 0 100%;margin:0;font-weight:normal;font-size:12px}
+  .title{font-size:16px;padding:4px 12px 12px}
+  .bar{padding:12px;gap:8px;align-items:stretch}
+  .bar label{flex:1 1 100%;display:flex;align-items:center;gap:8px;font-weight:bold}
+  .bar label input{flex:1;min-width:0}
+  .bar select{flex:1 1 100%}
+  .bar .sp{display:none}
+  .bar .ghost{flex:1 1 calc(50% - 4px);min-height:44px;padding:6px 8px}
+  .bar select,.bar input,td input,dialog input,dialog select,#login input{font-size:16px}
+  .bar select,.bar input{min-height:44px}
+
+  .wrap{padding:12px 12px 90px;overflow:visible}
+  table{min-width:0;width:100%;background:none}
+  table,tbody,tr,td{display:block}
+  thead{display:none}
+  tr{margin-bottom:14px;border:1px solid #222;background:#fff;box-shadow:0 1px 3px rgba(0,0,0,.12)}
+  td{display:flex;justify-content:space-between;align-items:center;gap:12px;text-align:right;border:0;border-bottom:1px solid #ddd;padding:10px 12px;font-size:15px;min-height:42px}
+  td::before{content:attr(data-label);font-weight:bold;text-align:left;flex:none;color:#333}
+  td.name{justify-content:center;font-size:17px;padding:12px;border-bottom:1px solid #222}
+  td.name::before,td.act::before{content:none}
+  td.none{color:#222}
+  td.none:empty,tr.tot td:empty{display:none}
+  td.stale{border-left:4px solid #a00000}
+  td.act{display:grid;grid-auto-flow:column;grid-auto-columns:1fr;gap:8px;padding:10px 12px;border-bottom:0;width:auto;white-space:normal}
+  .mx-tbl tr,.gx-tbl tr{display:flex;flex-direction:column}
+  .mx-tbl td.act,.gx-tbl td.act{order:1}
+  .mini{min-height:44px;margin:0;padding:6px 4px;font-size:14px}
+  td input{min-width:0;width:60%;min-height:44px}
+  tr.tot{display:flex;justify-content:space-between;background:#000;color:#fff}
+  tr.tot td{border:0;min-height:0}
+  tr.tot td::before{content:none}
+  .empty{padding:28px 12px}
+  #login{width:calc(100% - 32px);margin:8vh auto}
+}
+/* phones only: total rows read "Total Oct Posts - 107" and the Sign out button gets more breathing room */
+@media screen and (max-width:820px){
+  #rows tr.tot,#brows tr.tot,#miRows tr.tot{flex-direction:column;justify-content:flex-start;padding:6px 0}
+  #rows tr.tot td.tlbl,#brows tr.tot td.tlbl,#miRows tr.tot td.tlbl{display:none}
+  #rows tr.tot td[data-label],#brows tr.tot td[data-label],#miRows tr.tot td[data-label]{justify-content:flex-start;gap:6px;text-align:left;padding:7px 12px;font-weight:bold}
+  #rows tr.tot td[data-label]::before,#brows tr.tot td[data-label]::before,#miRows tr.tot td[data-label]::before{content:attr(data-label) " -";color:#fff}
+  #logoutBtn{padding-top:20px;padding-bottom:20px;margin-bottom:calc(16px + env(safe-area-inset-bottom));flex:none}
+  .side nav{min-height:0;overflow-y:auto}
+}
+/* dialogs: comfortable on small screens */
+@media screen and (max-width:820px){
+  dialog{width:calc(100vw - 24px);max-width:420px;max-height:calc(100dvh - 24px);overflow:auto;padding:18px}
+  dialog .row{flex-wrap:wrap}
+  dialog .row button{flex:1 1 40%;min-height:44px}
+  #accDelPerm{flex-basis:100%!important;order:3;margin-right:0!important}
+  dialog input,dialog select{min-height:44px}
+  .toast{bottom:calc(18px + env(safe-area-inset-bottom));max-width:90vw;text-align:center}
+}
+@media print{
+  /* always print the desktop layout, whatever device the report is exported from */
+  @page{size:landscape;margin:10mm}
+  *{-webkit-print-color-adjust:exact;print-color-adjust:exact}
+  .bar,.toast,td.act,th.noprint,.side,.overlay,.menu,.mtitle{display:none!important}
+  #app{display:block}
+  .print-logo{display:block;height:44px;width:auto}
+  .top{background:#000!important;flex-wrap:nowrap;position:static}
+  .stamp{flex:none;margin-left:auto;font-size:14px;font-weight:bold;opacity:1}
+  .title{font-size:24px;padding:6px 0 14px}
+  td input{border:0;padding:0;width:100%;min-width:0;min-height:0;font-size:12px}
+  body{background:#fff}
+  .wrap{padding:0;overflow:visible}
+  table{display:table;width:100%;min-width:0;background:#fff}
+  thead{display:table-header-group}
+  tbody{display:table-row-group}
+  tr{display:table-row;margin:0;border:0;box-shadow:none;background:none;page-break-inside:avoid}
+  td,th{display:table-cell;text-align:center;border:1px solid var(--line);font-size:12px;padding:5px;min-height:0}
+  td::before{content:none!important}
+  td.none:empty,tr.tot td:empty{display:table-cell}
+  td.stale{border-left:1px solid var(--line)}
+  tr.tot{display:table-row;background:none}
+}
+.toast{position:fixed;bottom:18px;left:50%;transform:translateX(-50%);background:#111;color:#fff;padding:10px 16px;font-size:14px}
+
+/* ===== Meta Ads Tracker page (added; self-contained, prefixed mx-) ===== */
+body.mx-open #title,body.mx-open #pbStrip,body.mx-open .top .stamp{display:none!important}
+.mx-strip{background:#000;color:#fff;display:flex;flex-wrap:wrap;justify-content:space-between;gap:8px 28px;padding:6px 16px 14px;font-weight:bold;font-size:15px}
+.mx-strip .y{color:#02FEBB;font-size:14px}
+@media screen and (min-width:821px){#pageMeta .mx-strip{display:grid;grid-template-columns:1fr auto 1fr}#pageMeta .mx-strip>:last-child{justify-self:end}}
+.mx-tbl th{background:#990000;color:#fff}
+.mx-tbl td.mx-act{background:#38761d;color:#fff;font-weight:bold}
+.mx-tbl td.mx-ina{background:#ea4335;color:#fff;font-weight:bold}
+.mx-tbl:not(.mx-all) .mx-cc{display:none!important}
+@media screen and (min-width:821px){.mx-tbl{min-width:100%}.mx-tbl th,.mx-tbl td{padding:10px 18px;white-space:nowrap}.mx-tbl td:nth-child(6){min-width:280px;white-space:normal}.mx-tbl th:nth-child(n+11):nth-child(-n+19){min-width:130px}}
+@media screen and (min-width:821px){.mx-tbl th:nth-child(6),.mx-tbl td:nth-child(6){position:sticky;left:-16px;z-index:2;box-shadow:inset 1px 0 0 var(--line),2px 0 0 var(--line),4px 0 6px -2px rgba(0,0,0,.25)}.mx-tbl td:nth-child(6){background:#fff}.mx-tbl th:nth-child(6){background:#990000;z-index:3}}
+@media screen and (min-width:821px),print{
+  .mx-tbl th,.mx-tbl td{text-align:left}
+  .mx-tbl td{font-weight:bold}
+  .mx-tbl td.act{font-weight:normal}
+}
+
+/* Meta Ads Tracker - total row */
+@media screen and (min-width:821px){.mx-tbl tr.tot td:nth-child(6){background:#000;color:#fff}}
+@media screen and (max-width:820px){.mx-tbl tr.tot{flex-direction:column}.mx-tbl tr.tot td{border-bottom:1px solid #333}.mx-tbl tr.tot td::before{content:attr(data-label);color:#fff}.mx-tbl tr.tot td.tot-l{justify-content:center;font-size:17px}.mx-tbl tr.tot td.tot-l::before{content:none}}
+
+/* ===== Meta and Instagram page (added; prefixed mi-) ===== */
+body.mi-open #title,body.mi-open #pbStrip,body.mi-open .top .stamp{display:none!important}
+.mi-tbl th,.mi-tbl th.biz,.mi-tbl th.mgr,.mi-tbl th.mi-i,.mi-tbl th.mi-m{background:#990000}
+.viewer #miAddAcc{display:none!important}
+
+/* ===== Google Ads Tracker page (added; self-contained, prefixed gx-) ===== */
+body.gx-open #title,body.gx-open #pbStrip,body.gx-open .top .stamp{display:none!important}
+.gx-strip{background:#000;color:#fff;display:flex;flex-wrap:wrap;justify-content:space-between;gap:8px 28px;padding:6px 16px 14px;font-weight:bold;font-size:15px}
+.gx-strip .y{color:#02FEBB;font-size:14px}
+.gx-tbl th{background:#990000;color:#fff}
+.gx-tbl td.gx-act{background:#38761d;color:#fff;font-weight:bold}
+.gx-tbl td.gx-ina{background:#ea4335;color:#fff;font-weight:bold}
+.gx-tbl:not(.gx-all) .gx-cc{display:none!important}
+@media screen and (min-width:821px),print{
+  .gx-tbl th,.gx-tbl td{text-align:left}
+  .gx-tbl td{font-weight:bold}
+  .gx-tbl td.act{font-weight:normal}
+}
+
+/* Google Ads Tracker - wide table: horizontal scroll + sticky Campaign Name (same as Meta Ads) */
+@media screen and (min-width:821px){.gx-tbl{min-width:100%}.gx-tbl th,.gx-tbl td{padding:10px 18px;white-space:nowrap}.gx-tbl td:nth-child(6){min-width:280px;white-space:normal}.gx-tbl th:nth-child(n+11):nth-child(-n+18){min-width:130px}}
+@media screen and (min-width:821px){.gx-tbl th:nth-child(6),.gx-tbl td:nth-child(6){position:sticky;left:-16px;z-index:2;box-shadow:inset 1px 0 0 var(--line),2px 0 0 var(--line),4px 0 6px -2px rgba(0,0,0,.25)}.gx-tbl td:nth-child(6){background:#fff}.gx-tbl th:nth-child(6){background:#990000;z-index:3}}
+/* Google Ads Tracker - total row */
+@media screen and (min-width:821px){.gx-tbl tr.tot td:nth-child(6){background:#000;color:#fff}}
+@media screen and (max-width:820px){.gx-tbl tr.tot{flex-direction:column}.gx-tbl tr.tot td{border-bottom:1px solid #333}.gx-tbl tr.tot td::before{content:attr(data-label);color:#fff}.gx-tbl tr.tot td.tot-l{justify-content:center;font-size:17px}.gx-tbl tr.tot td.tot-l::before{content:none}}
+
+/* ===== Change History page (admin only; added; prefixed ch-) ===== */
+body.ch-open #title,body.ch-open #pbStrip,body.ch-open .top .stamp{display:none!important}
+.ch-tbl th{background:#990000;color:#fff}
+.ch-tbl td.ch-a-INSERT{background:#38761d;color:#fff;font-weight:bold}
+.ch-tbl td.ch-a-UPDATE{background:#1155cc;color:#fff;font-weight:bold}
+.ch-tbl td.ch-a-DELETE{background:#ea4335;color:#fff;font-weight:bold}
+.ch-tbl td.ch-note{text-align:center;color:#555}
+.ch-undo{padding:5px 14px;font-size:13px;font-weight:bold;border:1px solid #990000;background:#fff;color:#990000;cursor:pointer}
+.ch-undo:hover{background:#990000;color:#fff}
+.ch-undo:disabled{opacity:.5;cursor:wait}
+@media screen and (min-width:821px){.ch-tbl{min-width:100%}.ch-tbl th,.ch-tbl td{padding:10px 14px;text-align:left;font-size:14px}.ch-tbl td.ch-t{white-space:nowrap}.ch-tbl td.ch-w{min-width:340px;overflow-wrap:anywhere}.ch-tbl td.ch-note{text-align:center}}
+
+/* ===== Modern month picker (replaces the browser's native month input) ===== */
+.mp-trigger{display:inline-flex;align-items:center;justify-content:space-between;gap:10px;min-width:170px;padding:7px 10px;border:1px solid #888;background:#fff;color:#111;font:inherit;text-align:left;cursor:pointer;border-radius:0;line-height:1.3}
+.mp-trigger:hover{border-color:#222}
+.mp-trigger:focus-visible,.mp-trigger[aria-expanded="true"]{outline:2px solid var(--plum);outline-offset:0;border-color:var(--plum)}
+.mp-trigger .mp-text{flex:1;white-space:nowrap}
+.mp-trigger .mp-text.mp-empty{color:#777}
+.mp-trigger svg{flex:none;width:16px;height:16px;color:var(--plum)}
+dialog .mp-trigger{display:flex;width:100%;padding:9px}
+.mp-pop{position:fixed;z-index:2147483000;width:292px;max-width:calc(100vw - 16px);background:#fff;border:1px solid #222;box-shadow:0 10px 30px rgba(0,0,0,.28);padding:12px;font-family:Arial,Helvetica,sans-serif;color:#111;animation:mpIn .12s ease-out}
+@keyframes mpIn{from{opacity:0;transform:translateY(-4px)}to{opacity:1;transform:none}}
+.mp-head{display:flex;align-items:center;justify-content:space-between;gap:6px;margin-bottom:10px}
+.mp-pop button{font:inherit;cursor:pointer;border:0;background:none;color:inherit;border-radius:0}
+.mp-nav{width:34px;height:34px;font-size:20px;line-height:1;border:1px solid #ccc!important}
+.mp-nav:hover{background:#f0e6eb!important;border-color:var(--plum)!important}
+.mp-pop .mp-year{flex:1;height:34px;font-weight:bold;font-size:15px;letter-spacing:.2px}
+.mp-year:hover{background:#f4f4f4!important}
+.mp-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:6px}
+.mp-cell{height:40px;font-size:14px;border:1px solid transparent!important;background:#f6f6f6!important}
+.mp-cell:hover{background:#f0e6eb!important}
+.mp-cell.mp-now{border-color:var(--green)!important;font-weight:bold}
+.mp-cell.mp-sel{background:var(--plum)!important;color:#fff!important;font-weight:bold}
+.mp-pop button:focus-visible{outline:2px solid var(--blue);outline-offset:1px}
+.mp-foot{display:flex;justify-content:space-between;align-items:center;margin-top:10px;padding-top:10px;border-top:1px solid #e3e3e3}
+.mp-pop .mp-foot button{font-size:13px;font-weight:bold;color:var(--plum);padding:6px 8px}
+.mp-foot button:hover{background:#f0e6eb!important}
+.mp-pop .mp-foot .mp-clear{color:#b00020}
+@media screen and (max-width:820px){
+  .bar label .mp-trigger{flex:1;min-width:0;min-height:44px;font-size:16px}
+  dialog .mp-trigger{min-height:44px;font-size:16px}
+  .mp-pop{width:min(320px,calc(100vw - 16px))}
+  .mp-cell{height:46px;font-size:15px}
+  .mp-nav{width:40px;height:40px}
+}
+@media print{.mp-pop{display:none!important}}
+/* modern date picker (campaign start/end dates) — reuses the .mp-* popup look */
+.dp-pop{width:304px}
+.dp-dow,.dp-days{display:grid;grid-template-columns:repeat(7,1fr);gap:2px}
+.dp-dow span{text-align:center;font-size:12px;font-weight:bold;color:#777;padding:4px 0}
+.dp-day{height:38px;font-size:14px;border:1px solid transparent!important;background:none}
+.dp-day:hover{background:#f0e6eb!important}
+.dp-day.dp-out{color:#aaa}
+.dp-day.dp-now{border-color:var(--green)!important;font-weight:bold}
+.dp-day.dp-sel{background:var(--plum)!important;color:#fff!important;font-weight:bold}
+/* days outside the selected month are greyed out in the Add / Edit post dialogs */
+.dp-day:disabled,.mp-nav:disabled,.mp-foot button:disabled{opacity:.3;cursor:not-allowed}
+.dp-day:disabled:hover,.mp-foot button:disabled:hover{background:none!important}
+.mp-nav:disabled:hover{background:none!important;border-color:#ccc!important}
+.mp-cell:disabled{opacity:.3;cursor:not-allowed}
+.mp-cell:disabled:hover{background:#f6f6f6!important}
+.dp-pop .mp-grid{grid-template-columns:repeat(3,1fr)}
+@media screen and (max-width:820px){
+  .dp-pop{width:min(332px,calc(100vw - 16px))}
+  .dp-day{height:42px;font-size:15px}
+}
+
+/* ===== Important notifications (bell) ===== */
+.nt-bell{position:relative;margin-left:auto;background:none;border:1px solid #777;color:#fff;border-radius:8px;min-width:44px;min-height:38px;padding:2px 10px;font-size:20px;line-height:1;display:inline-flex;align-items:center;justify-content:center}
+.nt-bell:hover,.nt-bell.on{border-color:#02FEBB}
+.nt-bell svg{width:22px;height:22px;display:block}
+.nt-badge{position:absolute;top:-7px;right:-7px;min-width:19px;height:19px;padding:0 5px;border-radius:10px;background:#e11d2e;color:#fff;font-size:11px;font-weight:bold;display:flex;align-items:center;justify-content:center;border:2px solid #000}
+.nt-badge.zero{background:#2e9e5b}
+.nt-pop{position:fixed;z-index:2147482000;width:min(420px,calc(100vw - 16px));max-height:min(74vh,660px);display:flex;flex-direction:column;background:#fff;color:#111;border:1px solid #222;border-radius:10px;box-shadow:0 14px 40px rgba(0,0,0,.35);overflow:hidden;font-family:Arial,Helvetica,sans-serif}
+.nt-head{background:#000;color:#fff;padding:11px 14px;display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap}
+.nt-head b{font-size:15px}
+.nt-head .nt-sub{font-size:12px;color:#02FEBB}
+.nt-head .nt-btns{display:flex;gap:6px}
+.nt-head button{background:none;border:1px solid #666;color:#fff;border-radius:6px;padding:4px 9px;font-size:12px}
+.nt-head button:disabled{opacity:.4;cursor:default}
+.nt-tabs{display:flex;border-bottom:1px solid #ddd;background:#fff}
+.nt-tab{flex:1;background:#fff;border:0;border-bottom:3px solid transparent;padding:9px 6px;font-size:13px;font-weight:bold;color:#666}
+.nt-tab.on{color:#111;border-bottom-color:#4a1530}
+.nt-body{overflow:auto;flex:1}
+.nt-sec{border-bottom:1px solid #e3e3e3}
+.nt-sech{position:sticky;top:0;z-index:1;background:#f4f4f4;padding:8px 14px;font-weight:bold;font-size:13px;display:flex;justify-content:space-between;align-items:center;gap:8px;border-bottom:1px solid #e3e3e3}
+.nt-sech span.c{background:#4a1530;color:#fff;border-radius:10px;padding:1px 8px;font-size:12px}
+.nt-item{display:flex;gap:8px;align-items:flex-start;justify-content:space-between;padding:9px 12px 9px 12px;border-bottom:1px solid #f0f0f0;border-left:4px solid #f59e0b;font-size:13px;cursor:pointer;background:#fff}
+.nt-item:hover{background:#fafafa}
+.nt-item.hi{border-left-color:#e11d2e}
+.nt-item.info{border-left-color:#1a73e8}
+.nt-item.rd{opacity:.55;border-left-color:#bbb}
+.nt-item .tx{min-width:0;flex:1}
+.nt-item .n{font-weight:bold;display:block;overflow-wrap:anywhere}
+.nt-item .t{color:#333;display:block;margin-top:2px;overflow-wrap:anywhere}
+.nt-item .m{color:#777;font-size:11.5px;display:block;margin-top:2px}
+.nt-rdbtn{flex:none;background:#fff;border:1px solid #888;border-radius:6px;padding:3px 8px;font-size:11.5px;color:#222;white-space:nowrap}
+.nt-rdbtn:hover{background:#f0f0f0}
+.nt-tag{flex:none;font-size:11px;color:#2e7d32;font-weight:bold;white-space:nowrap;padding-top:3px}
+.nt-empty{padding:26px 16px;text-align:center;color:#2e7d32;font-weight:bold;font-size:14px}
+.nt-empty small{display:block;margin-top:6px;color:#777;font-weight:normal;font-size:12px}
+.nt-load{padding:22px 16px;text-align:center;color:#666;font-size:13px}
+.nt-foot{padding:8px 14px;font-size:11.5px;color:#777;border-top:1px solid #e3e3e3;background:#fafafa}
+@media screen and (max-width:820px){.nt-pop{max-height:calc(100dvh - 90px - env(safe-area-inset-bottom))}.nt-head{padding:10px 12px}}
+@media print{.nt-bell,.nt-pop{display:none!important}}
+</style>
+</head>
+<body>
+
+<!-- LOGIN -->
+<div id="login" class="hidden">
+  <div class="brand"><img src="be-logo.png" alt="Boxedge"></div>
+  <h1>Boxedge Updates Tracker</h1>
+  <p>Sign in to view and update posts.</p>
+  <input id="email" type="email" placeholder="Email" autocomplete="username">
+  <input id="password" type="password" placeholder="Password" autocomplete="current-password">
+  <button class="primary" id="loginBtn">Sign in</button>
+  <div class="err" id="loginErr"></div>
+</div>
+
+<div id="boot" style="text-align:center;padding:20vh 0;color:#555">Loading…</div>
+
+<!-- APP -->
+<div id="app" class="hidden">
+  <aside class="side" id="side">
+    <div class="brand"><img src="be-logo.png" alt="Boxedge"></div>
+    <div class="who"><div class="av" id="whoAv"></div><div><div class="wn" id="whoName"></div><div class="wr" id="whoRole"></div></div></div>
+    <nav>
+      <button class="nav on" data-page="posts">Reels &amp; Posts</button>
+      <button class="nav" data-page="boost">Meta Boosting</button>
+      <button class="nav" id="miNav">Meta and Instagram</button>
+      <button class="nav" id="mxNav">Meta Ads Tracker</button>
+      <button class="nav" id="gxNav">Google Ads Tracker</button>
+      <button class="nav hidden" data-page="team">Team &amp; Managers</button>
+      <button class="nav hidden" id="chNav">Change History</button>
+    </nav>
+    <button class="nav" id="logoutBtn"><i class="fa-solid fa-right-from-bracket"></i>Sign out</button>
+  </aside>
+  <div class="overlay" id="overlay"></div>
+  <div class="main">
+  <div class="top">
+    <button class="menu" id="menuBtn" aria-label="Open menu">☰</button>
+    <span class="mtitle">Boxedge Updates Tracker</span>
+    <button class="nt-bell" id="ntBell" aria-label="Important notifications" title="Important notifications"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8a6 6 0 0 0-12 0c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.7 21a2 2 0 0 1-3.4 0"/></svg><span class="nt-badge zero hidden" id="ntBadge">0</span></button>
+    <img class="print-logo" alt="Boxedge">
+  </div>
+  <div class="title" id="title">Reels & Posts Update</div>
+  <div class="mx-strip" id="pbStrip"><span id="pbInfo"></span><span><span class="y">Sheet Last Updated :</span> <span class="y" id="stamp">–</span></span></div>
+  <div class="bar" id="bar">
+    <label>Month <input type="month" id="month"></label>
+    <select id="mgrFilter"><option value="">All managers</option></select>
+    <select id="bizFilter"><option value="">All businesses</option></select>
+    <span class="sp"></span>
+    <button class="ghost" id="exportBtn" title="Summary of the month and manager filter you see">Export report (CSV)</button>
+    <button class="ghost" id="exportLogBtn" title="Every post logged in the selected month">Export post log (CSV)</button>
+    <button class="ghost" id="printBtn">Print / Save PDF</button>
+    <button class="ghost" id="addAccBtn">+ Add account</button>
+  </div>
+  <div class="wrap" id="pagePosts">
+    <table>
+      <thead>
+        <tr>
+          <th class="biz">Business name</th>
+          <th class="main">Last post</th>
+          <th class="main" id="thTotal">Total posts</th>
+          <th class="zom">Zomato last post</th>
+          <th class="zom" id="thZTotal">Zomato total</th>
+          <th class="mgr">Account manager</th>
+          <th class="biz noprint">Update</th>
+        </tr>
+      </thead>
+      <tbody id="rows"></tbody>
+    </table>
+    <div class="empty hidden" id="empty">No accounts yet. Use “+ Add account” to start.</div>
+  </div>
+  <div class="wrap hidden" id="pageBoost">
+    <table>
+      <thead><tr>
+        <th class="biz">Business name</th>
+        <th class="main">Last boosting date</th>
+        <th class="main" id="thBTotal">Total boosts</th>
+        <th class="mgr">Account manager</th>
+        <th class="mgr">Remarks</th>
+        <th class="biz noprint">Update</th>
+      </tr></thead>
+      <tbody id="brows"></tbody>
+    </table>
+    <div class="empty hidden" id="bempty">No accounts on Meta Boosting yet. Use “+ Add boosting account” to start.</div>
+  </div>
+  <div class="wrap hidden" id="pageTeam">
+    <div class="teambox">
+      <h2>Add a manager</h2>
+      <p>Managers can view data, pick a month, export and print. They cannot add, edit, undo or delete anything.</p>
+      <div class="tmform">
+        <input id="tmName" placeholder="Full name" autocomplete="off">
+        <input id="tmEmail" type="email" placeholder="Email (used to sign in)" autocomplete="off">
+        <input id="tmPass" type="text" placeholder="Password (min 6 characters)" autocomplete="off">
+        <button class="primary" id="tmAdd">Add manager</button>
+      </div>
+    </div>
+    <table>
+      <thead><tr><th class="biz">Name</th><th class="main">Email</th><th class="main">Role</th><th class="main">Status</th><th class="mgr">Action</th></tr></thead>
+      <tbody id="trows"></tbody>
+    </table>
+  </div>
+  <div id="pageMeta" class="hidden">
+    <div class="title">Performance Marketing Tracker (Meta Ads)</div>
+    <div class="mx-strip">
+      <span id="mxInfo"></span>
+      <span>Total Active in Meta : <span id="mxActive">0</span></span>
+      <span><span class="y">Sheet Last Updated :</span> <span class="y" id="mxStamp">–</span></span>
+    </div>
+    <div class="bar">
+      <label>Month <input type="month" id="mxMonth"></label>
+      <label>Client <select id="mxClient"><option value="">All clients</option></select></label>
+      <label>Campaign type <select id="mxTypeF"><option value="">All types</option></select></label>
+      <label>Status <select id="mxStatusF"><option value="">All statuses</option><option value="Active">Active</option><option value="Inactive">Inactive</option></select></label>
+      <span class="sp"></span>
+      <button class="ghost" id="mxExport">Export (CSV)</button>
+      <button class="ghost" id="mxPrint">Print / Save PDF</button>
+      <button class="ghost" id="mxAdd">+ Add campaign</button>
+    </div>
+    <div class="wrap">
+      <table class="mx-tbl" id="mxTbl">
+        <thead><tr>
+          <th class="mx-sn">S.No.</th><th class="noprint">Update</th><th class="mx-cc">Client</th><th>Start Date</th><th>End Date</th><th>Campaign Name</th>
+          <th>Campaign Type</th><th>Status</th><th>Creative Type</th><th>Budget/day</th>
+          <th>Results</th><th>Cost/Results</th><th>Reach</th><th>Impressions</th><th>Amount Spent</th><th>CPM</th><th>CPC</th><th>Views</th><th>Clicks</th>
+        </tr></thead>
+        <tbody id="mxRows"></tbody>
+      </table>
+      <div class="empty hidden" id="mxEmpty">No campaigns for this month.</div>
+    </div>
+  </div>
+  <div id="pageGoogle" class="hidden">
+    <div class="title">Performance Marketing Tracker (Google Ads)</div>
+    <div class="gx-strip">
+      <span id="gxInfo"></span>
+      <span>Total Active in Google : <span id="gxActive">0</span></span>
+      <span><span class="y">Sheet Last Updated :</span> <span class="y" id="gxStamp">–</span></span>
+    </div>
+    <div class="bar">
+      <label>Month <input type="month" id="gxMonth"></label>
+      <label>Client <select id="gxClient"><option value="">All clients</option></select></label>
+      <label>Campaign type <select id="gxTypeF"><option value="">All types</option></select></label>
+      <label>Status <select id="gxStatusF"><option value="">All statuses</option><option value="Active">Active</option><option value="Inactive">Inactive</option></select></label>
+      <span class="sp"></span>
+      <button class="ghost" id="gxExport">Export (CSV)</button>
+      <button class="ghost" id="gxPrint">Print / Save PDF</button>
+      <button class="ghost" id="gxAdd">+ Add campaign</button>
+    </div>
+    <div class="wrap">
+      <table class="gx-tbl" id="gxTbl">
+        <thead><tr>
+          <th class="gx-sn">S.No.</th><th class="noprint">Update</th><th class="gx-cc">Client</th><th>Start Date</th><th>End Date</th><th>Campaign Name</th>
+          <th>Campaign Type</th><th>Status</th><th>Creative Type</th><th>Budget/day</th>
+          <th>Clicks</th><th>Impressions</th><th>Cost</th><th>CTR</th><th>Avg. CPC</th><th>Interaction Rate</th><th>Calls</th><th>Conversions</th>
+        </tr></thead>
+        <tbody id="gxRows"></tbody>
+      </table>
+      <div class="empty hidden" id="gxEmpty">No campaigns for this month.</div>
+    </div>
+  </div>
+  <div id="pageMI" class="hidden">
+    <div class="title" id="miTitle">Meta and Instagram Updates</div>
+    <div class="mx-strip">
+      <span id="miInfo"></span>
+      <span><span class="y">Sheet Last Updated :</span> <span class="y" id="miStamp">–</span></span>
+    </div>
+    <div class="bar">
+      <label>Month <input type="month" id="miMonth"></label>
+      <select id="miMgr"><option value="">All managers</option></select>
+      <select id="miBiz"><option value="">All businesses</option></select>
+      <span class="sp"></span>
+      <button class="ghost" id="miExport">Export (CSV)</button>
+      <button class="ghost" id="miPrint">Print / Save PDF</button>
+      <button class="ghost" id="miAddAcc">+ Add account</button>
+    </div>
+    <div class="wrap">
+      <table class="mi-tbl">
+        <thead><tr>
+          <th class="biz">Business Name</th><th class="mi-i">Insta Last Post</th><th class="mi-i" id="miThIT">Total Posts</th>
+          <th class="mi-m">Meta Last Post</th><th class="mi-m" id="miThMT">Total Posts</th>
+          <th class="mi-i" id="miThST">Total Instagram Stories</th><th class="mgr">Account Manager</th><th class="biz noprint mi-upd">Update</th>
+        </tr></thead>
+        <tbody id="miRows"></tbody>
+      </table>
+      <div class="empty hidden" id="miEmpty">No accounts yet.</div>
+    </div>
+  </div>
+  <div id="pageCH" class="hidden">
+    <div class="title" id="chTitle">Change History</div>
+    <div class="mx-strip">
+      <span id="chInfo"></span>
+      <span>Total changes : <span class="y" id="chCount">0</span></span>
+      <span>History is kept for 3 days, then deleted automatically</span>
+      <span><span class="y">Latest change :</span> <span class="y" id="chStamp">–</span></span>
+    </div>
+    <div class="bar">
+      <label>Month <input type="month" id="chMonth" data-clearable data-placeholder="All time"></label>
+      <select id="chUser"><option value="">All users</option></select>
+      <select id="chSect"><option value="">All pages</option></select>
+      <select id="chAct"><option value="">All actions</option><option value="INSERT">Added</option><option value="UPDATE">Edited</option><option value="DELETE">Deleted</option></select>
+      <span class="sp"></span>
+      <button class="ghost" id="chExport">Export (CSV)</button>
+    </div>
+    <div class="wrap">
+      <table class="ch-tbl">
+        <thead><tr><th>Date &amp; Time</th><th>Changed By</th><th>Page</th><th>Business</th><th>Action</th><th>What Changed</th><th>Undo</th></tr></thead>
+        <tbody id="chRows"></tbody>
+      </table>
+      <div class="empty hidden" id="chEmpty">No changes recorded for this selection.</div>
+    </div>
+  </div>
+  </div>
+</div>
+
+<!-- META ADS CAMPAIGN -->
+<dialog id="miAccDlg">
+  <h2 id="miAccTitle">Add account</h2>
+  <label for="miAccName">Business name</label>
+  <input id="miAccName" autocomplete="off">
+  <label for="miAccGrp">Colour group</label>
+  <select id="miAccGrp"><option value="pinterest">Pinterest</option><option value="thread">Thread</option><option value="telegram">Telegram</option><option value="youtube">YouTube</option><option value="linkedin">LinkedIn</option><option value="instagram">Instagram</option><option value="facebook">Facebook</option><option value="gmb">GMB</option></select>
+  <label for="miAccMgr">Account manager</label>
+  <input id="miAccMgr" list="miMgrList" autocomplete="off">
+  <datalist id="miMgrList"></datalist>
+  <label for="miAccFrom">Active from (month)</label>
+  <input type="month" id="miAccFrom">
+  <label for="miAccUntil">Active until (month, optional)</label>
+  <input type="month" id="miAccUntil">
+  <div class="row"><button class="ghost hidden" id="miAccDelPerm" style="margin-right:auto">Delete</button><button class="ghost" id="miAccCancel">Cancel</button><button class="primary" id="miAccSave">Save account</button></div>
+</dialog>
+
+<dialog id="miDlg">
+  <h2 id="miDlgTitle">Add</h2>
+  <label for="miKind">Type</label>
+  <select id="miKind"><option value="insta">Instagram post</option><option value="meta">Meta post</option><option value="story">Instagram story</option></select>
+  <label for="miDate" id="miDateLbl">Date</label>
+  <input type="date" id="miDate">
+  <label for="miCount" id="miCountLbl">Number of entries</label>
+  <input type="number" id="miCount" min="1" max="1000" value="1">
+  <div class="row"><button class="ghost" id="miCancel">Cancel</button><button class="primary" id="miSave">Save</button></div>
+</dialog>
+
+<dialog id="mxDlg">
+  <h2 id="mxDlgTitle">Add campaign</h2>
+  <label for="mxCli">Client</label>
+  <input id="mxCli" list="mxCliList" placeholder="e.g. Kwality" autocomplete="off">
+  <datalist id="mxCliList"></datalist>
+  <label for="mxName">Campaign name</label>
+  <input id="mxName" autocomplete="off">
+  <label for="mxType">Campaign type</label>
+  <input id="mxType" list="mxTypeList" placeholder="e.g. Post Boosting" autocomplete="off">
+  <datalist id="mxTypeList"></datalist>
+  <label for="mxCre">Creative type</label>
+  <input id="mxCre" list="mxCreList" placeholder="e.g. Reel" autocomplete="off">
+  <datalist id="mxCreList"></datalist>
+  <label for="mxStart">Start date</label>
+  <input type="date" id="mxStart">
+  <label for="mxEnd">End date</label>
+  <input type="date" id="mxEnd">
+  <label for="mxBud">Budget / day</label>
+  <input type="number" id="mxBud" min="0" step="1" value="0">
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:0 10px">
+    <div><label for="mxRes">Results</label><input id="mxRes" autocomplete="off" placeholder="e.g. 42 Leads"></div>
+    <div><label for="mxCpr">Cost / Results</label><input type="number" id="mxCpr" min="0" step="any" placeholder="–"></div>
+    <div><label for="mxReach">Reach</label><input type="number" id="mxReach" min="0" step="any" placeholder="–"></div>
+    <div><label for="mxImp">Impressions</label><input type="number" id="mxImp" min="0" step="any" placeholder="–"></div>
+    <div><label for="mxSpent">Amount Spent</label><input type="number" id="mxSpent" min="0" step="any" placeholder="–"></div>
+    <div><label for="mxCpm">CPM</label><input type="number" id="mxCpm" min="0" step="any" placeholder="–"></div>
+    <div><label for="mxCpc">CPC</label><input type="number" id="mxCpc" min="0" step="any" placeholder="–"></div>
+    <div><label for="mxViews">Views</label><input type="number" id="mxViews" min="0" step="any" placeholder="–"></div>
+    <div><label for="mxClicks">Clicks</label><input type="number" id="mxClicks" min="0" step="any" placeholder="–"></div>
+  </div>
+  <div class="row"><button class="ghost hidden" id="mxDel" style="margin-right:auto">Delete</button><button class="ghost" id="mxCancel">Cancel</button><button class="primary" id="mxSave">Save campaign</button></div>
+</dialog>
+
+<!-- GOOGLE ADS CAMPAIGN -->
+<dialog id="gxDlg">
+  <h2 id="gxDlgTitle">Add campaign</h2>
+  <label for="gxCli">Client</label>
+  <input id="gxCli" list="gxCliList" placeholder="e.g. Kwality" autocomplete="off">
+  <datalist id="gxCliList"></datalist>
+  <label for="gxName">Campaign name</label>
+  <input id="gxName" autocomplete="off">
+  <label for="gxType">Campaign type</label>
+  <input id="gxType" list="gxTypeList" placeholder="e.g. Search" autocomplete="off">
+  <datalist id="gxTypeList"></datalist>
+  <label for="gxCre">Creative type</label>
+  <input id="gxCre" list="gxCreList" placeholder="e.g. Responsive Search Ad" autocomplete="off">
+  <datalist id="gxCreList"></datalist>
+  <label for="gxStart">Start date</label>
+  <input type="date" id="gxStart">
+  <label for="gxEnd">End date</label>
+  <input type="date" id="gxEnd">
+  <label for="gxBud">Budget / day</label>
+  <input type="number" id="gxBud" min="0" step="1" value="0">
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:0 10px">
+    <div><label for="gxClicks">Clicks</label><input type="number" id="gxClicks" min="0" step="any" placeholder="–"></div>
+    <div><label for="gxImp">Impressions</label><input type="number" id="gxImp" min="0" step="any" placeholder="–"></div>
+    <div><label for="gxCost">Cost</label><input type="number" id="gxCost" min="0" step="any" placeholder="–"></div>
+    <div><label for="gxCtr">CTR (%)</label><input type="number" id="gxCtr" min="0" step="any" placeholder="–"></div>
+    <div><label for="gxCpc">Avg. CPC</label><input type="number" id="gxCpc" min="0" step="any" placeholder="–"></div>
+    <div><label for="gxIr">Interaction Rate (%)</label><input type="number" id="gxIr" min="0" step="any" placeholder="–"></div>
+    <div><label for="gxCalls">Calls</label><input type="number" id="gxCalls" min="0" step="any" placeholder="–"></div>
+    <div><label for="gxConv">Conversions</label><input type="number" id="gxConv" min="0" step="any" placeholder="–"></div>
+  </div>
+  <div class="row"><button class="ghost hidden" id="gxDel" style="margin-right:auto">Delete</button><button class="ghost" id="gxCancel">Cancel</button><button class="primary" id="gxSave">Save campaign</button></div>
+</dialog>
+
+<!-- ADD POST -->
+<dialog id="postDlg">
+  <h2 id="postTitle">Add post</h2>
+  <div id="chanWrap">
+    <label for="postChan">Platform</label>
+    <select id="postChan"><option value="main">Main account</option><option value="zomato">Zomato</option></select>
+  </div>
+  <label for="postDate">Post date</label>
+  <input type="date" id="postDate">
+  <label for="postCount" id="postCountLbl">Number of posts</label>
+  <input type="number" id="postCount" min="1" max="50" value="1">
+  <div class="row"><button class="ghost" id="postCancel">Cancel</button><button class="primary" id="postSave">Save post</button></div>
+</dialog>
+
+<!-- EDIT LAST POST -->
+<dialog id="postEditDlg">
+  <h2 id="peTitle">Edit last post</h2>
+  <div id="peChanWrap">
+    <label for="peChan">Platform</label>
+    <select id="peChan"><option value="main">Main account</option><option value="zomato">Zomato</option></select>
+  </div>
+  <label for="peDate" id="peDateLbl">Last post date</label>
+  <input type="date" id="peDate">
+  <label for="peCount" id="peCountLbl">Total posts this month</label>
+  <input type="number" id="peCount" min="1" max="1000" value="1">
+  <div class="row"><button class="ghost" id="peCancel">Cancel</button><button class="primary" id="peSave">Save changes</button></div>
+</dialog>
+
+<!-- ADD ACCOUNT -->
+<dialog id="accDlg">
+  <h2 id="accTitle">Add account</h2>
+  <label for="accName">Business name</label>
+  <input id="accName" placeholder="e.g. Koi Kitchen">
+  <label for="accGrp">Colour group</label>
+  <select id="accGrp"><option value="pinterest">Pinterest</option><option value="thread">Thread</option><option value="telegram">Telegram</option><option value="youtube">YouTube</option><option value="linkedin">LinkedIn</option><option value="instagram">Instagram</option><option value="facebook">Facebook</option><option value="gmb">GMB</option></select>
+  <label for="accMgr">Account manager</label>
+  <input id="accMgr" list="mgrList" placeholder="Pick existing or type a new name">
+  <datalist id="mgrList"></datalist>
+  <label for="accZom">Zomato</label>
+  <select id="accZom"><option value="false">No Zomato</option><option value="true">Has Zomato</option></select>
+  <label for="accFrom">Show from month</label>
+  <input type="month" id="accFrom" data-clearable data-placeholder="Select month">
+  <label for="accUntil">Show until month (leave empty = ongoing)</label>
+  <input type="month" id="accUntil" data-clearable data-placeholder="Ongoing (no end month)">
+  <div class="row"><button class="ghost hidden" id="accDelPerm" style="margin-right:auto">Delete permanently</button><button class="ghost" id="accCancel">Cancel</button><button class="primary" id="accSave">Save account</button></div>
+</dialog>
+
+<script>
+// ====== Modern month picker: upgrades every <input type="month"> ======
+// The original <input id="..."> stays in the page (hidden) and keeps its "YYYY-MM" value,
+// so .value reads/writes and onchange handlers elsewhere keep working unchanged.
+(function () {
+  const MONTHS = ["January","February","March","April","May","June","July","August","September","October","November","December"];
+  const pad = n => String(n).padStart(2, "0");
+  const nowYM = () => { const d = new Date(); return d.getFullYear() + "-" + pad(d.getMonth() + 1); };
+  const valueDesc = Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, "value");
+  const ICON = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="4.5" width="18" height="16.5" rx="2"/><path d="M3 9.5h18M8 2.5v4M16 2.5v4"/></svg>';
+  let active = null;
+  // page month filters (every page except Team & Managers): future months cannot be picked
+  const NO_FUTURE = ["month", "mxMonth", "gxMonth", "miMonth", "chMonth"];
+
+  function enhance(input) {
+    const noFuture = NO_FUTURE.includes(input.id);
+    const clearable = input.hasAttribute("data-clearable");
+    const placeholder = input.dataset.placeholder || "Select month";
+    const getV = () => valueDesc.get.call(input);
+    const setV = v => valueDesc.set.call(input, v);
+
+    // keep the real input as plain text, hidden — it stays the source of truth
+    const initial = getV();
+    input.type = "text";
+    input.style.display = "none";
+    input.tabIndex = -1;
+    input.setAttribute("aria-hidden", "true");
+    setV(initial);
+
+    const btn = document.createElement("button");
+    btn.type = "button";
+    btn.className = "mp-trigger";
+    btn.setAttribute("aria-haspopup", "dialog");
+    btn.setAttribute("aria-expanded", "false");
+    btn.title = "Choose month";
+    btn.innerHTML = '<span class="mp-text"></span>' + ICON;
+    input.insertAdjacentElement("afterend", btn);
+    const text = btn.querySelector(".mp-text");
+
+    function label() {
+      const m = /^(\d{4})-(\d{2})$/.exec(getV() || "");
+      if (m && +m[2] >= 1 && +m[2] <= 12) { text.textContent = MONTHS[+m[2] - 1] + " " + m[1]; text.classList.remove("mp-empty"); }
+      else { text.textContent = placeholder; text.classList.add("mp-empty"); }
+    }
+    // programmatic `input.value = "2026-10"` (used all over the app) refreshes the label too
+    Object.defineProperty(input, "value", {
+      configurable: true,
+      get() { return getV(); },
+      set(v) { setV(v); label(); }
+    });
+    label();
+
+    // clicking the <label> text opens the picker as well
+    const labels = Array.from(input.labels || []);
+    labels.forEach(l => l.addEventListener("click", e => {
+      if (btn.contains(e.target)) return;
+      e.preventDefault(); btn.click();
+    }));
+
+    function open() {
+      if (active) active.close(false);
+      const cur = /^(\d{4})-(\d{2})$/.exec(getV() || "");
+      let viewYear = cur ? +cur[1] : new Date().getFullYear();
+      let mode = "months";          // "months" | "years"
+      const pop = document.createElement("div");
+      pop.className = "mp-pop";
+      pop.setAttribute("role", "dialog");
+      pop.setAttribute("aria-label", "Choose month");
+      // inside an open <dialog> the popup must live in the dialog, or it renders behind it
+      (btn.closest("dialog") || document.body).appendChild(pop);
+
+      function render(focusIdx) {
+        const sel = getV(), now = nowYM();
+        let head, grid;
+        if (mode === "months") {
+          head = '<button type="button" class="mp-nav" data-nav="-1" aria-label="Previous year">‹</button>' +
+                 '<button type="button" class="mp-year" aria-label="Choose year">' + viewYear + '</button>' +
+                 '<button type="button" class="mp-nav" data-nav="1"' + (noFuture && viewYear >= new Date().getFullYear() ? " disabled" : "") + ' aria-label="Next year">›</button>';
+          grid = MONTHS.map((n, i) => {
+            const v = viewYear + "-" + pad(i + 1);
+            return '<button type="button" class="mp-cell' + (v === sel ? " mp-sel" : "") + (v === now ? " mp-now" : "") +
+                   '" data-i="' + i + '" data-v="' + v + '" aria-pressed="' + (v === sel) + '" aria-label="' + n + " " + viewYear + '"' + (noFuture && v > now ? " disabled" : "") + '>' + n.slice(0, 3) + "</button>";
+          }).join("");
+        } else {
+          const start = viewYear - (((viewYear % 12) + 12) % 12);
+          head = '<button type="button" class="mp-nav" data-nav="-12" aria-label="Previous years">‹</button>' +
+                 '<span class="mp-year" style="display:flex;align-items:center;justify-content:center">' + start + " – " + (start + 11) + "</span>" +
+                 '<button type="button" class="mp-nav" data-nav="12"' + (noFuture && start + 12 > new Date().getFullYear() ? " disabled" : "") + ' aria-label="Next years">›</button>';
+          const selY = cur2(sel), nowY = new Date().getFullYear();
+          grid = Array.from({ length: 12 }, (_, i) => {
+            const y = start + i;
+            return '<button type="button" class="mp-cell' + (y === selY ? " mp-sel" : "") + (y === nowY ? " mp-now" : "") +
+                   '" data-i="' + i + '" data-y="' + y + '"' + (noFuture && y > nowY ? " disabled" : "") + '>' + y + "</button>";
+          }).join("");
+        }
+        pop.innerHTML = '<div class="mp-head">' + head + '</div><div class="mp-grid">' + grid + '</div>' +
+          '<div class="mp-foot">' + (clearable ? '<button type="button" class="mp-clear">Clear</button>' : "<span></span>") +
+          '<button type="button" class="mp-today">This month</button></div>';
+        place();
+        if (focusIdx != null) { const c = pop.querySelector('.mp-cell[data-i="' + focusIdx + '"]'); c && c.focus(); }
+      }
+      const cur2 = v => { const m = /^(\d{4})-/.exec(v || ""); return m ? +m[1] : null; };
+
+      function choose(v) {
+        if (noFuture && v > nowYM()) return;
+        const changed = v !== getV();
+        setV(v); label();
+        close(true);
+        if (changed) {
+          input.dispatchEvent(new Event("input", { bubbles: true }));
+          input.dispatchEvent(new Event("change", { bubbles: true }));
+        }
+      }
+      function place() {
+        const r = btn.getBoundingClientRect(), pw = pop.offsetWidth, ph = pop.offsetHeight;
+        let left = Math.min(Math.max(8, r.left), window.innerWidth - pw - 8);
+        let top = r.bottom + 6;
+        if (top + ph > window.innerHeight - 8) top = (r.top - ph - 6 > 8) ? r.top - ph - 6 : Math.max(8, window.innerHeight - ph - 8);
+        pop.style.left = left + "px"; pop.style.top = top + "px";
+      }
+      function close(focusBack) {
+        window.removeEventListener("resize", place);
+        window.removeEventListener("scroll", place, true);
+        pop.remove();
+        btn.setAttribute("aria-expanded", "false");
+        if (active && active.pop === pop) active = null;
+        if (focusBack) btn.focus();
+      }
+
+      pop.addEventListener("click", e => {
+        const t = e.target.closest("button"); if (!t) return;
+        if (t.dataset.nav) { viewYear += +t.dataset.nav; render(); return; }
+        if (t.classList.contains("mp-year")) { mode = mode === "months" ? "years" : "months"; render(); return; }
+        if (t.classList.contains("mp-today")) { choose(nowYM()); return; }
+        if (t.classList.contains("mp-clear")) { choose(""); return; }
+        if (t.dataset.v) { choose(t.dataset.v); return; }
+        if (t.dataset.y) { viewYear = +t.dataset.y; mode = "months"; render(); }
+      });
+      pop.addEventListener("keydown", e => {
+        const c = e.target.closest(".mp-cell"); if (!c) return;
+        const step = { ArrowLeft: -1, ArrowRight: 1, ArrowUp: -3, ArrowDown: 3 }[e.key];
+        if (step === undefined) return;
+        e.preventDefault();
+        let i = +c.dataset.i + step;
+        if (i < 0) { viewYear -= (mode === "months" ? 1 : 12); i += 12; render(i); }
+        else if (i > 11) {
+          const ny = viewYear + (mode === "months" ? 1 : 12), cy = new Date().getFullYear();
+          if (noFuture && (mode === "months" ? ny > cy : ny - (((ny % 12) + 12) % 12) > cy)) return;
+          viewYear = ny; i -= 12; render(i);
+        }
+        else pop.querySelector('.mp-cell[data-i="' + i + '"]').focus();
+      });
+
+      btn.setAttribute("aria-expanded", "true");
+      window.addEventListener("resize", place);
+      window.addEventListener("scroll", place, true);
+      active = { pop, btn, labels, close };
+      render();
+      const first = pop.querySelector(".mp-sel") || pop.querySelector(".mp-now") || pop.querySelector(".mp-cell");
+      first && first.focus();
+    }
+
+    btn.addEventListener("click", () => (active && active.btn === btn) ? active.close(true) : open());
+  }
+
+  document.querySelectorAll('input[type="month"]').forEach(enhance);
+
+  // click outside / Escape closes (clicking the field's own label counts as "inside")
+  document.addEventListener("mousedown", e => {
+    if (!active || active.pop.contains(e.target) || active.btn.contains(e.target)) return;
+    if (active.labels.some(l => l.contains(e.target))) return;
+    active.close(false);
+  });
+  document.addEventListener("keydown", e => {
+    if (e.key === "Escape" && active) { e.preventDefault(); e.stopPropagation(); active.close(true); }
+  }, true);
+})();
+</script>
+<script>
+// ====== Modern date picker: upgrades the date fields of the Meta Ads / Google Ads campaign dialogs and the Add post and Edit post dialogs ======
+// The original <input id="..."> stays in the page (hidden) and keeps its "YYYY-MM-DD" value,
+// so .value reads/writes and the save/validation code elsewhere keep working unchanged.
+(function () {
+  const IDS = ["mxStart", "mxEnd", "gxStart", "gxEnd", "postDate", "peDate", "miDate"];
+  // Add / Edit dialogs of the first 3 pages: only days of the month selected on that page can be picked
+  const LOCK = { postDate: "month", peDate: "month", miDate: "miMonth" };
+  const lockOf = id => { const el = LOCK[id] && document.getElementById(LOCK[id]); const v = el ? el.value : ""; return /^\d{4}-\d{2}$/.test(v) ? v : null; };
+  const MONTHS = ["January","February","March","April","May","June","July","August","September","October","November","December"];
+  const DOW = ["Su","Mo","Tu","We","Th","Fr","Sa"];
+  const pad = n => String(n).padStart(2, "0");
+  const iso = (y, m, d) => y + "-" + pad(m + 1) + "-" + pad(d);
+  const isoOf = dt => iso(dt.getFullYear(), dt.getMonth(), dt.getDate());
+  const parse = s => { const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(s || ""); return m ? { y: +m[1], m: +m[2] - 1, d: +m[3] } : null; };
+  const valueDesc = Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, "value");
+  const ICON = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="4.5" width="18" height="16.5" rx="2"/><path d="M3 9.5h18M8 2.5v4M16 2.5v4"/></svg>';
+  let active = null;
+
+  function enhance(input) {
+    const placeholder = "Select date";
+    const getV = () => valueDesc.get.call(input);
+    const setV = v => valueDesc.set.call(input, v);
+
+    const initial = getV();
+    input.type = "text";
+    input.style.display = "none";
+    input.tabIndex = -1;
+    input.setAttribute("aria-hidden", "true");
+    setV(initial);
+
+    const btn = document.createElement("button");
+    btn.type = "button";
+    btn.className = "mp-trigger";
+    btn.setAttribute("aria-haspopup", "dialog");
+    btn.setAttribute("aria-expanded", "false");
+    btn.title = "Choose date";
+    btn.innerHTML = '<span class="mp-text"></span>' + ICON;
+    input.insertAdjacentElement("afterend", btn);
+    const text = btn.querySelector(".mp-text");
+
+    function label() {
+      const p = parse(getV());
+      if (p) { text.textContent = p.d + " " + MONTHS[p.m].slice(0, 3) + " " + p.y; text.classList.remove("mp-empty"); }
+      else { text.textContent = placeholder; text.classList.add("mp-empty"); }
+    }
+    // programmatic `input.value = "2026-10-22"` (used when the dialog opens) refreshes the label too
+    Object.defineProperty(input, "value", {
+      configurable: true,
+      get() { return getV(); },
+      set(v) { setV(v); label(); }
+    });
+    label();
+
+    const labels = Array.from(input.labels || []);
+    labels.forEach(l => l.addEventListener("click", e => {
+      if (btn.contains(e.target)) return;
+      e.preventDefault(); btn.click();
+    }));
+
+    function open() {
+      if (active) active.close(false);
+      const cur = parse(getV());
+      const t0 = new Date();
+      const lock = lockOf(input.id), inLock = v => !lock || v.slice(0, 7) === lock;
+      let viewY = lock ? +lock.slice(0, 4) : (cur ? cur.y : t0.getFullYear());
+      let viewM = lock ? +lock.slice(5, 7) - 1 : (cur ? cur.m : t0.getMonth());
+      let focusIso = cur && inLock(getV()) ? getV() : (inLock(isoOf(t0)) ? isoOf(t0) : iso(viewY, viewM, 1));
+      let mode = "days";          // "days" | "months" | "years"
+      const pop = document.createElement("div");
+      pop.className = "mp-pop dp-pop";
+      pop.setAttribute("role", "dialog");
+      pop.setAttribute("aria-label", "Choose date");
+      (btn.closest("dialog") || document.body).appendChild(pop);
+
+      function render(focusSel) {
+        const sel = getV(), now = isoOf(new Date());
+        let head, body, todayLbl = "Today";
+        if (mode === "days") {
+          const dis = lock ? " disabled" : "";
+          head = '<button type="button" class="mp-nav" data-nav="-1"' + dis + ' aria-label="Previous month">‹</button>' +
+                 (lock ? '<span class="mp-year" style="display:flex;align-items:center;justify-content:center">' + MONTHS[viewM] + " " + viewY + '</span>'
+                       : '<button type="button" class="mp-year" data-up="months" aria-label="Choose month and year">' + MONTHS[viewM] + " " + viewY + '</button>') +
+                 '<button type="button" class="mp-nav" data-nav="1"' + dis + ' aria-label="Next month">›</button>';
+          const first = new Date(viewY, viewM, 1);
+          const start = new Date(viewY, viewM, 1 - first.getDay());
+          let cells = "";
+          for (let i = 0; i < 42; i++) {
+            const dt = new Date(start.getFullYear(), start.getMonth(), start.getDate() + i);
+            const v = isoOf(dt);
+            cells += '<button type="button" class="dp-day' + (dt.getMonth() !== viewM ? " dp-out" : "") + (v === sel ? " dp-sel" : "") + (v === now ? " dp-now" : "") +
+                     '" data-iso="' + v + '" tabindex="' + (v === focusIso ? 0 : -1) + '" aria-pressed="' + (v === sel) + '" aria-label="' + dt.getDate() + " " + MONTHS[dt.getMonth()] + " " + dt.getFullYear() + '"' + (inLock(v) ? "" : " disabled") + '>' + dt.getDate() + "</button>";
+          }
+          body = '<div class="dp-dow">' + DOW.map(d => "<span>" + d + "</span>").join("") + '</div><div class="dp-days">' + cells + "</div>";
+        } else if (mode === "months") {
+          head = '<button type="button" class="mp-nav" data-nav="-12" aria-label="Previous year">‹</button>' +
+                 '<button type="button" class="mp-year" data-up="years" aria-label="Choose year">' + viewY + '</button>' +
+                 '<button type="button" class="mp-nav" data-nav="12" aria-label="Next year">›</button>';
+          body = '<div class="mp-grid">' + MONTHS.map((n, i) => {
+            const isSel = cur2(sel, "y") === viewY && cur2(sel, "m") === i;
+            const isNow = t0.getFullYear() === viewY && t0.getMonth() === i;
+            return '<button type="button" class="mp-cell' + (isSel ? " mp-sel" : "") + (isNow ? " mp-now" : "") + '" data-m="' + i + '">' + n.slice(0, 3) + "</button>";
+          }).join("") + "</div>";
+        } else {
+          const s0 = viewY - (((viewY % 12) + 12) % 12);
+          head = '<button type="button" class="mp-nav" data-nav="-144" aria-label="Previous years">‹</button>' +
+                 '<span class="mp-year" style="display:flex;align-items:center;justify-content:center">' + s0 + " – " + (s0 + 11) + "</span>" +
+                 '<button type="button" class="mp-nav" data-nav="144" aria-label="Next years">›</button>';
+          body = '<div class="mp-grid">' + Array.from({ length: 12 }, (_, i) => {
+            const y = s0 + i;
+            return '<button type="button" class="mp-cell' + (y === cur2(sel, "y") ? " mp-sel" : "") + (y === t0.getFullYear() ? " mp-now" : "") + '" data-y="' + y + '">' + y + "</button>";
+          }).join("") + "</div>";
+        }
+        pop.innerHTML = '<div class="mp-head">' + head + "</div>" + body +
+          '<div class="mp-foot"><span></span><button type="button" class="mp-today"' + (inLock(now) ? "" : " disabled") + '>' + todayLbl + "</button></div>";
+        place();
+        if (focusSel) { const c = pop.querySelector('.dp-day[tabindex="0"]') || pop.querySelector(".mp-sel") || pop.querySelector(".mp-cell"); c && c.focus(); }
+      }
+      const cur2 = (v, k) => { const p = parse(v); return p ? p[k] : null; };
+
+      function choose(v) {
+        if (!inLock(v)) return;
+        const changed = v !== getV();
+        setV(v); label();
+        close(true);
+        if (changed) {
+          input.dispatchEvent(new Event("input", { bubbles: true }));
+          input.dispatchEvent(new Event("change", { bubbles: true }));
+        }
+      }
+      function place() {
+        const r = btn.getBoundingClientRect(), pw = pop.offsetWidth, ph = pop.offsetHeight;
+        const left = Math.min(Math.max(8, r.left), window.innerWidth - pw - 8);
+        let top = r.bottom + 6;
+        if (top + ph > window.innerHeight - 8) top = (r.top - ph - 6 > 8) ? r.top - ph - 6 : Math.max(8, window.innerHeight - ph - 8);
+        pop.style.left = left + "px"; pop.style.top = top + "px";
+      }
+      function close(focusBack) {
+        window.removeEventListener("resize", place);
+        window.removeEventListener("scroll", place, true);
+        pop.remove();
+        btn.setAttribute("aria-expanded", "false");
+        if (active && active.pop === pop) active = null;
+        if (focusBack) btn.focus();
+      }
+      function shiftMonth(n) { const d = new Date(viewY, viewM + n, 1); viewY = d.getFullYear(); viewM = d.getMonth(); }
+
+      pop.addEventListener("click", e => {
+        const t = e.target.closest("button"); if (!t) return;
+        if (t.dataset.nav) {
+          const n = +t.dataset.nav;
+          if (mode === "days") shiftMonth(n); else viewY += n / 12;
+          render(); return;
+        }
+        if (t.dataset.up) { mode = t.dataset.up; render(); return; }
+        if (t.classList.contains("mp-today")) { choose(isoOf(new Date())); return; }
+        if (t.dataset.iso) { choose(t.dataset.iso); return; }
+        if (t.dataset.m) { viewM = +t.dataset.m; mode = "days"; render(); return; }
+        if (t.dataset.y) { viewY = +t.dataset.y; mode = "months"; render(); }
+      });
+      pop.addEventListener("keydown", e => {
+        const c = e.target.closest(".dp-day"); if (!c) return;
+        const step = { ArrowLeft: -1, ArrowRight: 1, ArrowUp: -7, ArrowDown: 7 }[e.key];
+        let next = null;
+        const p = parse(c.dataset.iso);
+        if (step !== undefined) next = new Date(p.y, p.m, p.d + step);
+        else if (e.key === "PageUp") next = new Date(p.y, p.m - 1, p.d);
+        else if (e.key === "PageDown") next = new Date(p.y, p.m + 1, p.d);
+        else if (e.key === "Home") next = new Date(p.y, p.m, p.d - new Date(p.y, p.m, p.d).getDay());
+        else if (e.key === "End") next = new Date(p.y, p.m, p.d + 6 - new Date(p.y, p.m, p.d).getDay());
+        if (!next) return;
+        e.preventDefault();
+        if (!inLock(isoOf(next))) return;
+        focusIso = isoOf(next); viewY = next.getFullYear(); viewM = next.getMonth();
+        render(true);
+      });
+
+      btn.setAttribute("aria-expanded", "true");
+      window.addEventListener("resize", place);
+      window.addEventListener("scroll", place, true);
+      active = { pop, btn, labels, close };
+      render(true);
+    }
+
+    btn.addEventListener("click", () => (active && active.btn === btn) ? active.close(true) : open());
+  }
+
+  IDS.forEach(id => { const el = document.getElementById(id); if (el) enhance(el); });
+
+  document.addEventListener("mousedown", e => {
+    if (!active || active.pop.contains(e.target) || active.btn.contains(e.target)) return;
+    if (active.labels.some(l => l.contains(e.target))) return;
+    active.close(false);
+  });
+  document.addEventListener("keydown", e => {
+    if (e.key === "Escape" && active) { e.preventDefault(); e.stopPropagation(); active.close(true); }
+  }, true);
+})();
+</script>
+<script>
+// ====== 1. PASTE YOUR SUPABASE DETAILS HERE ======
+const SUPABASE_URL = "https://zvakzuqzstxyqnouvlti.supabase.co";
+const SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inp2YWt6dXF6c3R4eXFub3V2bHRpIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTI2NjQ2NzQsImV4cCI6MjEwODI0MDY3NH0.wcnMoGcduHT5Cy_bSb5M6JYH9UV55BcdArliW7_bzZI";
+// =================================================
+
+const STALE_DAYS = 7; // highlight last-post dates older than this
+const db = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+const $ = id => document.getElementById(id);
+const esc = s => String(s ?? "").replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+const iso = d => new Date(d.getTime() - d.getTimezoneOffset() * 60000).toISOString().slice(0, 10);
+const fmt = s => new Date(s + "T00:00:00").toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" });
+
+let me = null, isAdmin = false, team = [];
+let boostRemarks = [];
+const remarkOf = (id, month) => { const r = boostRemarks.find(x => x.account_id === id && x.month === month); return r ? r.remarks : ""; };
+let accounts = [], posts = [], boosts = [], page = "posts", dlgMode = "post", stampTime = null, target = null, editingId = null;
+
+const pageAccounts = () => accounts.filter(a => page === "boost" ? a.boosting : a.social !== false);
+// An account is shown in a month only if that month is inside its "active from" / "active until" range.
+// Accounts with no range set (older accounts) show in every month.
+const activeIn = (a, month) => (!a.start_month || a.start_month <= month) && (!a.end_month || a.end_month >= month);
+const prevMonth = m => { const [y, mo] = m.split("-").map(Number); const d = new Date(y, mo - 2, 1); return d.getFullYear() + "-" + String(d.getMonth() + 1).padStart(2, "0"); };
+const monthLabel = m => new Date(m + "-01T00:00:00").toLocaleDateString("en-GB", { month: "long", year: "numeric" });
+// default date for the Add dialogs: today if it falls inside the selected month, otherwise the nearest day of that month
+const dateInMonth = m => { const t = iso(new Date()); if (!/^\d{4}-\d{2}$/.test(m || "") || t.startsWith(m)) return t; const [y, mo] = m.split("-").map(Number); return t < m ? m + "-01" : iso(new Date(y, mo, 0)); };
+
+function toast(msg) {
+  const t = document.createElement("div");
+  t.className = "toast"; t.textContent = msg;
+  document.body.appendChild(t); setTimeout(() => t.remove(), 2200);
+}
+
+// ---------- auth ----------
+async function init() {
+  const { data } = await db.auth.getSession();
+  $("boot").classList.add("hidden");
+  data.session ? showApp() : showLogin();
+}
+function showLogin() { $("login").classList.remove("hidden"); $("app").classList.add("hidden"); }
+async function showApp() {
+  const { data: { session } } = await db.auth.getSession();
+  const { data: prof, error } = await db.from("profiles").select("*").eq("id", session.user.id).maybeSingle();
+  if (error || !prof || !prof.active) {
+    await db.auth.signOut(); showLogin();
+    $("loginErr").textContent = error
+      ? (/profiles/.test(error.message) ? "Run roles.sql in Supabase first." : error.message)
+      : "This login has no access. Ask the admin to add or enable you.";
+    return;
+  }
+  me = prof; isAdmin = prof.role === "admin";
+  $("login").classList.add("hidden"); $("app").classList.remove("hidden");
+  applyRole();
+  if (!$("month").value) $("month").value = iso(new Date()).slice(0, 7);
+  page = location.hash === "#boost" ? "boost" : (location.hash === "#team" && isAdmin ? "team" : "posts");
+  applyPage();
+  await Promise.all([load(), isAdmin ? loadTeam() : null]);
+}
+// Show who is signed in and hide everything a manager must not use (the database enforces it too).
+function applyRole() {
+  document.body.classList.toggle("viewer", !isAdmin);
+  $("whoName").textContent = me.full_name;
+  $("whoRole").textContent = isAdmin ? "Admin" : "Manager";
+  $("whoAv").innerHTML = '<i class="fa-solid fa-user"></i>';
+  document.querySelector('.nav[data-page="team"]').classList.toggle("hidden", !isAdmin);
+  $("empty").textContent = isAdmin ? "No accounts yet. Use “+ Add account” to start." : "No accounts for this month.";
+  $("bempty").textContent = isAdmin ? "No accounts on Meta Boosting yet. Use “+ Add boosting account” to start." : "No accounts on Meta Boosting for this month.";
+}
+$("loginBtn").onclick = async () => {
+  $("loginErr").textContent = "";
+  const { error } = await db.auth.signInWithPassword({ email: $("email").value.trim(), password: $("password").value });
+  error ? $("loginErr").textContent = error.message : showApp();
+};
+$("password").addEventListener("keydown", e => { if (e.key === "Enter") $("loginBtn").click(); });
+$("logoutBtn").onclick = async () => { await db.auth.signOut(); me = null; isAdmin = false; team = []; showLogin(); };
+
+// ---------- data ----------
+async function load() {
+  const [a, p, bo, br] = await Promise.all([
+    db.from("accounts").select("*").order("sort_order").order("created_at"),
+    db.from("posts").select("account_id,channel,post_date,created_at"),
+    db.from("boosts").select("account_id,boost_date,created_at"),
+    db.from("boost_remarks").select("account_id,month,remarks")
+  ]);
+  if (a.error || p.error) { toast((a.error || p.error).message); return; }
+  accounts = a.data; posts = p.data;
+  if (bo.error) { boosts = []; toast("Run boost.sql in Supabase to enable Meta Boosting"); } else boosts = bo.data;
+  if (br.error) { boostRemarks = []; toast(/boost_remarks/.test(br.error.message) ? "Run boost_remarks.sql in Supabase to save monthly remarks" : br.error.message); } else boostRemarks = br.data;
+  stampTime = [...posts, ...boosts].reduce((m, x) => (!m || x.created_at > m ? x.created_at : m), null);
+  render();
+}
+
+function stats(accId, channel, month) {
+  const list = posts.filter(x => x.account_id === accId && x.channel === channel && x.post_date <= month + "-31");
+  const last = list.reduce((m, x) => (!m || x.post_date > m ? x.post_date : m), null);
+  const total = list.filter(x => x.post_date.startsWith(month)).length;
+  return { last, total };
+}
+
+function render() {
+  if (page === "team") { $("title").textContent = "Team & Managers"; $("pbInfo").textContent = ""; renderTeam(); return; }
+  $("pbStrip").style.display = "";
+  const month = $("month").value;
+  const [y, m] = month.split("-");
+  const label = new Date(+y, +m - 1, 1).toLocaleDateString("en-GB", { month: "short", year: "numeric" });
+  $("title").textContent = page === "boost" ? "Meta Boosting" : "Reels & Posts Update";
+  $("thTotal").textContent = `Total ${label.split(" ")[0]} posts`;
+  $("thZTotal").textContent = `Zomato ${label.split(" ")[0]} posts`;
+  stampTime = (page === "boost" ? boosts : posts).reduce((m, x) => (!m || x.created_at > m ? x.created_at : m), null);
+  $("stamp").textContent = stampTime ? new Date(stampTime).toLocaleString("en-GB", { day: "2-digit", month: "long", year: "numeric", hour: "2-digit", minute: "2-digit", second: "2-digit" }) : "–";
+
+  // manager filter
+  const mgrs = [...new Set(pageAccounts().map(a => a.manager).filter(Boolean))].sort();
+  $("mgrList").innerHTML = mgrs.map(x => `<option value="${esc(x)}">`).join("");
+  const cur = $("mgrFilter").value;
+  $("mgrFilter").innerHTML = '<option value="">All managers</option>' + mgrs.map(x => `<option ${x === cur ? "selected" : ""}>${esc(x)}</option>`).join("");
+
+  const bizs = [...new Set(pageAccounts().filter(a => activeIn(a, month)).map(a => a.name).filter(Boolean))].sort((x, y) => x.localeCompare(y));
+  const curBiz = $("bizFilter").value;
+  $("bizFilter").innerHTML = '<option value="">All businesses</option>' + bizs.map(x => `<option ${x === curBiz ? "selected" : ""}>${esc(x)}</option>`).join("");
+
+  $("pbInfo").textContent = `${monthLabel(month)} · ${$("mgrFilter").value || "All managers"}`;
+  const list = accounts.filter(a => (!$("mgrFilter").value || a.manager === $("mgrFilter").value) && (!$("bizFilter").value || a.name === $("bizFilter").value) && activeIn(a, month));
+  $("empty").classList.toggle("hidden", accounts.some(a => a.social !== false && activeIn(a, month)));
+  const limit = new Date(); limit.setDate(limit.getDate() - STALE_DAYS);
+  const staleBefore = iso(limit);
+
+  let pSum = 0, zSum = 0;
+  const postRows = list.filter(a => a.social !== false);
+  $("rows").innerHTML = postRows.map(a => {
+    const s = stats(a.id, "main", month);
+    const z = stats(a.id, "zomato", month);
+    pSum += s.total; if (a.has_zomato) zSum += z.total;
+    const lastCls = month === iso(new Date()).slice(0, 7) && (!s.last || s.last < staleBefore) ? "stale" : "";
+    const zCells = a.has_zomato
+      ? `<td data-label="Zomato last post">${z.last ? fmt(z.last) : "–"}</td><td data-label="Zomato total">${z.total}</td>`
+      : `<td class="none" data-label="Zomato">No Zomato</td><td class="none"></td>`;
+    return `<tr>
+      <td class="name ${["pinterest","thread","telegram","youtube","linkedin","instagram","facebook","gmb"].includes(a.grp) ? "g-" + a.grp : a.grp === "red" ? "red" : "blue"}">${esc(a.name)}</td>
+      <td class="${lastCls}" data-label="Last post">${s.last ? fmt(s.last) : "No posts yet"}</td>
+      <td data-label="Total posts">${s.total}</td>
+      ${zCells}
+      <td class="mgr" data-label="Manager">${esc(a.manager)}</td>
+      <td class="act">
+        <button class="mini add" data-add="${a.id}">+ Post</button>
+        ${isAdmin ? `<button class="mini" data-edit="${a.id}" title="Edit account or change manager">Edit</button>` : ""}
+        <button class="mini" data-pedit="${a.id}" title="Edit last post date and number of posts">Edit post</button>
+        ${isAdmin ? `<button class="mini" data-del="${a.id}" title="Remove from this month onwards">✕</button>` : ""}
+      </td></tr>`;
+  }).join("") + (postRows.length ? `<tr class="tot"><td class="tlbl" colspan="2">Total</td><td data-label="Total ${label.split(" ")[0]} Posts">${pSum}</td><td></td><td data-label="Zomato ${label.split(" ")[0]} Posts">${zSum}</td><td colspan="2"></td></tr>` : "");
+  renderBoost(list, month, label.split(" ")[0]);
+}
+
+function renderBoost(list, month, mon) {
+  $("thBTotal").textContent = `Total ${mon} boosts`;
+  const bl = list.filter(a => a.boosting);
+  $("bempty").classList.toggle("hidden", accounts.some(a => a.boosting && activeIn(a, month)));
+  let sum = 0;
+  const rows = bl.map(a => {
+    const mine = boosts.filter(b => b.account_id === a.id);
+    const last = mine.filter(x => x.boost_date <= month + "-31").reduce((m, x) => (!m || x.boost_date > m ? x.boost_date : m), null);
+    const total = mine.filter(b => b.boost_date.startsWith(month)).length; sum += total;
+    return `<tr>
+      <td class="name ${["pinterest","thread","telegram","youtube","linkedin","instagram","facebook","gmb"].includes(a.grp) ? "g-" + a.grp : a.grp === "red" ? "red" : "blue"}">${esc(a.name)}</td>
+      <td data-label="Last boosting date">${last ? fmt(last) : "No boosts yet"}</td>
+      <td data-label="Total ${mon} boosts">${total}</td>
+      <td class="mgr" data-label="Manager">${esc(a.manager)}</td>
+      <td data-label="Remarks"><input data-rem="${a.id}" value="${esc(remarkOf(a.id, month))}" placeholder="Add remarks"></td>
+      <td class="act">
+        <button class="mini add" data-badd="${a.id}">+ Boost</button>
+        ${isAdmin ? `<button class="mini" data-edit="${a.id}">Edit</button>` : ""}
+        <button class="mini" data-bedit="${a.id}" title="Edit last boost date and number of boosts">Edit boost</button>
+        ${isAdmin ? `<button class="mini" data-bdel="${a.id}" title="Remove from Meta Boosting">✕</button>` : ""}
+      </td></tr>`;
+  }).join("");
+  $("brows").innerHTML = rows + (bl.length ? `<tr class="tot"><td class="tlbl" colspan="2">Total</td><td data-label="Total ${mon} Boosting">${sum}</td><td colspan="3"></td></tr>` : "");
+}
+$("month").onchange = render;
+$("mgrFilter").onchange = render;
+$("bizFilter").onchange = render;
+
+// ---------- row actions ----------
+const rowClick = async e => {
+  const b = e.target.closest("button"); if (!b) return;
+  if ((b.dataset.edit || b.dataset.bdel || b.dataset.del) && !isAdmin) return;   // account-level actions: admin only
+  if (b.dataset.add || b.dataset.badd) {
+    dlgMode = b.dataset.badd ? "boost" : "post";
+    target = accounts.find(a => a.id === (b.dataset.add || b.dataset.badd));
+    $("postTitle").textContent = `Add ${dlgMode} – ${target.name}`;
+    $("postCountLbl").textContent = `Number of ${dlgMode}s`;
+    $("postSave").textContent = `Save ${dlgMode}`;
+    $("chanWrap").classList.toggle("hidden", !target.has_zomato || dlgMode === "boost");
+    $("postChan").value = "main";
+    $("postDate").value = dateInMonth($("month").value);
+    $("postCount").value = 1;
+    $("postDlg").showModal();
+  } else if (b.dataset.edit) {
+    const a = accounts.find(x => x.id === b.dataset.edit);
+    editingId = a.id;
+    $("accTitle").textContent = `Edit account – ${a.name}`;
+    $("accName").value = a.name;
+    $("accGrp").value = ({blue:"facebook",red:"youtube"})[a.grp] || a.grp;
+    $("accMgr").value = a.manager || "";
+    $("accZom").value = String(a.has_zomato);
+    $("accFrom").value = a.start_month || ""; $("accUntil").value = a.end_month || "";
+    $("accDelPerm").classList.remove("hidden");
+    zomVis();
+    $("accDlg").showModal();
+  } else if (b.dataset.bdel) {
+    const acc = accounts.find(a => a.id === b.dataset.bdel);
+    let res;
+    if (acc.social !== false) {
+      if (!confirm(`Remove ${acc.name} from Meta Boosting? Its Reels & Posts data stays.`)) return;
+      res = await db.from("accounts").update({ boosting: false }).eq("id", acc.id);
+    } else {
+      if (!confirm(`Delete ${acc.name} and all its boosts?`)) return;
+      res = await db.from("accounts").delete().eq("id", acc.id);
+    }
+    res.error ? toast(res.error.message) : (toast("Removed"), load());
+  } else if (b.dataset.pedit) {
+    peMode = "post";
+    peAcc = accounts.find(a => a.id === b.dataset.pedit);
+    $("peTitle").textContent = `Edit last post – ${peAcc.name}`;
+    $("peDateLbl").textContent = "Last post date";
+    $("peCountLbl").textContent = `Total posts in ${monthLabel($("month").value)}`;
+    $("peChanWrap").classList.toggle("hidden", !peAcc.has_zomato);
+    $("peChan").value = "main";
+    peFill();
+    $("postEditDlg").showModal();
+  } else if (b.dataset.bedit) {
+    peMode = "boost";
+    peAcc = accounts.find(a => a.id === b.dataset.bedit);
+    $("peTitle").textContent = `Edit last boost – ${peAcc.name}`;
+    $("peDateLbl").textContent = "Last boosting date";
+    $("peCountLbl").textContent = `Total boosts in ${monthLabel($("month").value)}`;
+    $("peChanWrap").classList.add("hidden");
+    peFill();
+    $("postEditDlg").showModal();
+  } else if (b.dataset.del) {
+    const acc = accounts.find(a => a.id === b.dataset.del);
+    const month = $("month").value;
+    if (acc.start_month && acc.start_month >= month) {
+      if (!confirm(`${acc.name} starts in ${monthLabel(acc.start_month)}, so removing it from ${monthLabel(month)} would hide it in every month.\n\nDelete it permanently with all its posts?`)) return;
+      const { error } = await db.from("accounts").delete().eq("id", acc.id);
+      return error ? toast(error.message) : (toast("Account deleted"), load());
+    }
+    if (!confirm(`Remove ${acc.name} from ${monthLabel(month)} onwards?\n\nEarlier months and all its post history are kept.`)) return;
+    const { error } = await db.from("accounts").update({ end_month: prevMonth(month) }).eq("id", acc.id);
+    error ? toast(/end_month/.test(error.message) ? "Run the month-columns SQL in Supabase first (see instructions)" : error.message) : (toast(`Removed from ${monthLabel(month)} onwards`), load());
+  }
+};
+$("rows").addEventListener("click", rowClick);
+$("brows").addEventListener("click", rowClick);
+$("brows").addEventListener("change", async e => {
+  const el = e.target, id = el.dataset.rem; if (!id) return;
+  const month = $("month").value, val = el.value.trim();
+  const { error } = await db.from("boost_remarks").upsert({ account_id: id, month, remarks: val, updated_at: new Date().toISOString() }, { onConflict: "account_id,month" });
+  if (error) return toast(/boost_remarks/.test(error.message) ? "Run boost_remarks.sql in Supabase first" : error.message);
+  const cur = boostRemarks.find(x => x.account_id === id && x.month === month);
+  cur ? cur.remarks = val : boostRemarks.push({ account_id: id, month, remarks: val });
+  toast("Saved");
+});
+
+// ---------- add post ----------
+$("postCancel").onclick = () => $("postDlg").close();
+$("postSave").onclick = async () => {
+  const n = Math.max(1, Math.min(50, +$("postCount").value || 1));
+  if (!$("postDate").value) return toast("Pick a date");
+  const boost = dlgMode === "boost";
+  const rows = Array.from({ length: n }, () => boost
+    ? { account_id: target.id, boost_date: $("postDate").value }
+    : { account_id: target.id, channel: target.has_zomato ? $("postChan").value : "main", post_date: $("postDate").value });
+  const { error } = await db.from(boost ? "boosts" : "posts").insert(rows);
+  if (error) return toast(error.message);
+  $("postDlg").close(); toast(boost ? "Boost saved" : "Post saved"); load();
+};
+
+// ---------- edit last post (date + number of posts) ----------
+let peAcc = null, peMode = "post";
+// "Last date" and "Total" are exactly what the table shows for the selected month (per platform for posts)
+function peLast(accId, channel) {
+  const month = $("month").value;
+  const boost = peMode === "boost", col = boost ? "boost_date" : "post_date";
+  const all = (boost ? boosts : posts).filter(x => x.account_id === accId && (boost || x.channel === channel));
+  const date = all.filter(x => x[col] <= month + "-31").reduce((m, x) => (!m || x[col] > m ? x[col] : m), null);
+  return date ? { date, total: all.filter(x => x[col].startsWith(month)).length, inMonth: date.startsWith(month) } : null;
+}
+function peChannel() { return peMode === "post" && peAcc.has_zomato ? $("peChan").value : "main"; }
+function peFill() {
+  const last = peLast(peAcc.id, peChannel());
+  $("peDate").value = last ? last.date : "";
+  $("peCount").value = last ? last.total : 1;
+}
+$("peChan").onchange = peFill;
+$("peCancel").onclick = () => $("postEditDlg").close();
+$("peSave").onclick = async () => {
+  if (!peAcc) return;
+  const boost = peMode === "boost", tbl = boost ? "boosts" : "posts", col = boost ? "boost_date" : "post_date";
+  const month = $("month").value, channel = peChannel();
+  const last = peLast(peAcc.id, channel);
+  if (!last || !last.inMonth) return toast(`No ${boost ? "boosts" : "posts"} in ${monthLabel(month)} yet – use + ${boost ? "Boost" : "Post"} to add one`);
+  const date = $("peDate").value;
+  const n = Math.max(1, Math.min(1000, Math.floor(+$("peCount").value) || 1));
+  if (!date) return toast("Pick a date");
+  if (date === last.date && n === last.total) { $("postEditDlg").close(); return; }
+  $("peSave").disabled = true;
+  try {
+    // 1. read this month's rows from the database
+    const [y, mo] = month.split("-").map(Number);
+    const next = new Date(y, mo, 1), nextStart = next.getFullYear() + "-" + String(next.getMonth() + 1).padStart(2, "0") + "-01";
+    let q = db.from(tbl).select("id," + col).eq("account_id", peAcc.id).gte(col, month + "-01").lt(col, nextStart);
+    if (!boost) q = q.eq("channel", channel);
+    const cur = await q;
+    if (cur.error) return toast(cur.error.message);
+    const rowsM = cur.data.map(r => ({ id: r.id, d: r[col] }));
+    // 2. move the last-date entries to the new date
+    const moveIds = rowsM.filter(r => r.d === last.date).map(r => r.id);
+    if (date !== last.date && moveIds.length) {
+      const up = await db.from(tbl).update({ [col]: date }).in("id", moveIds);
+      if (up.error) return toast(up.error.message);
+      rowsM.forEach(r => { if (moveIds.includes(r.id)) r.d = date; });
+    }
+    // 3. make the month total equal to the number entered
+    if (n > rowsM.length) {
+      const ins = await db.from(tbl).insert(Array.from({ length: n - rowsM.length }, () => boost
+        ? { account_id: peAcc.id, boost_date: date }
+        : { account_id: peAcc.id, channel, post_date: date }));
+      if (ins.error) { toast(ins.error.message); load(); return; }
+    } else if (n < rowsM.length) {
+      // drop the NEWEST entries first (the ones just added), never older posts from earlier in the month
+      const drop = rowsM.sort((a, b) => (a.d < b.d ? 1 : a.d > b.d ? -1 : 0)).slice(0, rowsM.length - n).map(r => r.id);
+      const del = await db.from(tbl).delete().in("id", drop);
+      if (del.error) { toast(del.error.message); load(); return; }
+    }
+    $("postEditDlg").close(); toast(boost ? "Boost updated" : "Post updated"); load();
+  } finally { $("peSave").disabled = false; }
+};
+
+// ---------- add account ----------
+// Zomato only applies to Reels & Posts, so hide it on the Meta Boosting page.
+function zomVis() {
+  const h = page === "boost";
+  $("accZom").classList.toggle("hidden", h);
+  document.querySelector('label[for="accZom"]').classList.toggle("hidden", h);
+}
+$("addAccBtn").onclick = () => {
+  if (!isAdmin) return;
+  editingId = null;
+  $("accTitle").textContent = page === "boost" ? "Add boosting account" : "Add account";
+  $("accName").value = ""; $("accMgr").value = "";
+  $("accGrp").value = "facebook"; $("accZom").value = "false";
+  $("accFrom").value = $("month").value; $("accUntil").value = "";
+  $("accDelPerm").classList.add("hidden");
+  zomVis();
+  $("accDlg").showModal();
+};
+$("accCancel").onclick = () => $("accDlg").close();
+$("accDelPerm").onclick = async () => {
+  if (!isAdmin) return;
+  const acc = accounts.find(x => x.id === editingId); if (!acc) return;
+  if (!confirm(`Permanently delete ${acc.name} and ALL its posts/boosts in every month? This cannot be undone.`)) return;
+  const { error } = await db.from("accounts").delete().eq("id", acc.id);
+  if (error) return toast(error.message);
+  $("accDlg").close(); toast("Account deleted"); load();
+};
+$("accSave").onclick = async () => {
+  if (!isAdmin) return;
+  const name = $("accName").value.trim();
+  if (!name) return toast("Enter a business name");
+  const fields = {
+    name, grp: $("accGrp").value, manager: $("accMgr").value.trim(),
+    has_zomato: $("accZom").value === "true",
+    start_month: $("accFrom").value || null,
+    end_month: $("accUntil").value || null
+  };
+  if (fields.start_month && fields.end_month && fields.end_month < fields.start_month) return toast("'Until' month must not be before 'From' month");
+  const { error } = editingId
+    ? await db.from("accounts").update(fields).eq("id", editingId)
+    : await db.from("accounts").insert({ ...fields, sort_order: accounts.length, boosting: page === "boost", social: page !== "boost" });
+  if (error) return toast(/start_month|end_month/.test(error.message) ? "Run the month-columns SQL in Supabase first (see instructions)" : error.message);
+  $("accDlg").close(); toast(editingId ? "Account updated" : "Account added"); load();
+};
+
+// ---------- export ----------
+function downloadCsv(filename, rows) {
+  const csv = rows.map(r => r.map(c => '"' + String(c ?? "").replace(/"/g, '""') + '"').join(",")).join("\r\n");
+  const a = document.createElement("a");
+  a.href = URL.createObjectURL(new Blob(["\ufeff" + csv], { type: "text/csv;charset=utf-8" }));
+  a.download = filename;
+  document.body.appendChild(a); a.click(); a.remove();
+  setTimeout(() => URL.revokeObjectURL(a.href), 1000);
+}
+const visibleAccounts = () => pageAccounts().filter(a => (!$("mgrFilter").value || a.manager === $("mgrFilter").value) && (!$("bizFilter").value || a.name === $("bizFilter").value) && activeIn(a, $("month").value));
+
+$("exportBtn").onclick = () => {
+  if (page === "boost") return exportBoost(false);
+  const month = $("month").value;
+  const mon = new Date(month + "-01T00:00:00").toLocaleDateString("en-GB", { month: "short", year: "numeric" });
+  const rows = [["Business Name", "Group", "Last Post", `Total ${mon} Posts`, "Zomato Last Post", `Zomato ${mon} Posts`, "Account Manager"]];
+  visibleAccounts().forEach(a => {
+    const s = stats(a.id, "main", month), z = stats(a.id, "zomato", month);
+    rows.push([
+      a.name, ({pinterest:"Pinterest",thread:"Thread",telegram:"Telegram",youtube:"YouTube",linkedin:"LinkedIn",instagram:"Instagram",facebook:"Facebook",gmb:"GMB",red:"Other platforms"})[a.grp] || "Main accounts",
+      s.last ? fmt(s.last) : "No posts yet", s.total,
+      a.has_zomato ? (z.last ? fmt(z.last) : "No posts yet") : "No Zomato",
+      a.has_zomato ? z.total : "", a.manager || ""
+    ]);
+  });
+  downloadCsv(`posts-report-${month}.csv`, rows);
+  toast("Report exported");
+};
+
+$("exportLogBtn").onclick = () => {
+  if (page === "boost") return exportBoost(true);
+  const month = $("month").value;
+  const byId = Object.fromEntries(accounts.map(a => [a.id, a]));
+  const rows = [["Business Name", "Platform", "Post Date", "Account Manager"]];
+  posts.filter(p => p.post_date.startsWith(month) && byId[p.account_id]
+      && (!$("mgrFilter").value || byId[p.account_id].manager === $("mgrFilter").value)
+      && (!$("bizFilter").value || byId[p.account_id].name === $("bizFilter").value))
+    .sort((x, y) => (y.post_date > x.post_date ? 1 : -1))
+    .forEach(p => rows.push([byId[p.account_id].name, p.channel === "zomato" ? "Zomato" : "Main", p.post_date, byId[p.account_id].manager || ""]));
+  downloadCsv(`posts-log-${month}.csv`, rows);
+  toast("Post log exported");
+};
+
+function exportBoost(log) {
+  const month = $("month").value;
+  const mon = new Date(month + "-01T00:00:00").toLocaleDateString("en-GB", { month: "short", year: "numeric" });
+  const bl = visibleAccounts().filter(a => a.boosting);
+  const rows = log ? [["Business Name", "Boost Date", "Account Manager"]]
+    : [["Business Name", "Last Boosting Date", `Total ${mon} Boosts`, "Account Manager", "Remarks"]];
+  bl.forEach(a => {
+    const mine = boosts.filter(b => b.account_id === a.id);
+    if (log) mine.filter(b => b.boost_date.startsWith(month)).sort((x, y) => (y.boost_date > x.boost_date ? 1 : -1))
+      .forEach(b => rows.push([a.name, b.boost_date, a.manager || ""]));
+    else {
+      const last = mine.filter(x => x.boost_date <= month + "-31").reduce((m, x) => (!m || x.boost_date > m ? x.boost_date : m), null);
+      rows.push([a.name, last ? fmt(last) : "No boosts yet", mine.filter(b => b.boost_date.startsWith(month)).length, a.manager || "", remarkOf(a.id, month)]);
+    }
+  });
+  downloadCsv(`boosting-${log ? "log" : "report"}-${month}.csv`, rows);
+  toast("Exported");
+}
+
+const sideLogo = document.querySelector(".side .brand img");
+if (sideLogo) document.querySelectorAll(".print-logo").forEach(i => { i.src = sideLogo.src; });
+$("printBtn").onclick = () => window.print();
+
+// ---------- navigation ----------
+function closeMenu() { $("side").classList.remove("open"); $("overlay").classList.remove("show"); }
+function applyPage() {
+  document.querySelectorAll(".nav[data-page]").forEach(n => n.classList.toggle("on", n.dataset.page === page));
+  $("pagePosts").classList.toggle("hidden", page !== "posts");
+  $("pageBoost").classList.toggle("hidden", page !== "boost");
+  $("pageTeam").classList.toggle("hidden", page !== "team");
+  $("bar").classList.toggle("hidden", page === "team");
+  $("addAccBtn").textContent = page === "boost" ? "+ Add boosting account" : "+ Add account";
+  $("exportLogBtn").textContent = page === "boost" ? "Export boost log (CSV)" : "Export post log (CSV)";
+  closeMenu();
+}
+document.querySelectorAll(".nav[data-page]").forEach(n => n.onclick = () => {
+  page = n.dataset.page; history.replaceState(null, "", "#" + page);
+  applyPage(); render(); window.scrollTo(0, 0);
+});
+$("menuBtn").onclick = () => { $("side").classList.add("open"); $("overlay").classList.add("show"); };
+$("overlay").onclick = closeMenu;
+
+// ---------- team (admin adds managers) ----------
+async function loadTeam() {
+  const { data, error } = await db.from("profiles").select("*").order("created_at");
+  if (error) return toast(error.message);
+  team = data.sort((a, b) => (a.role === b.role ? 0 : a.role === "admin" ? -1 : 1) || a.full_name.localeCompare(b.full_name));
+  if (page === "team") renderTeam();
+}
+function renderTeam() {
+  $("trows").innerHTML = team.map(t => `<tr>
+    <td data-label="Name">${esc(t.full_name)}</td>
+    <td data-label="Email">${esc(t.email)}</td>
+    <td data-label="Role">${t.role === "admin" ? "Admin" : "Manager"}</td>
+    <td data-label="Status">${t.active ? "Active" : "Disabled"}</td>
+    <td data-label="Action">${t.id === me.id ? "You" : `<button class="mini" data-tm="${t.id}">${t.active ? "Disable" : "Enable"}</button>${t.role === "manager" ? ` <button class="mini" data-tmdel="${t.id}" title="Delete permanently">Delete</button>` : ""}`}</td></tr>`).join("");
+}
+$("trows").addEventListener("click", async e => {
+  const b = e.target.closest("button[data-tm],button[data-tmdel]"); if (!b || !isAdmin) return;
+  const t = team.find(x => x.id === (b.dataset.tm || b.dataset.tmdel)); if (!t || t.id === me.id) return;
+  if (b.dataset.tmdel) {
+    if (t.role !== "manager") return;
+    if (!confirm(`Permanently delete ${t.full_name} (${t.email})?\n\nTheir login is removed for good and cannot be restored. Use Disable instead if you may need them again.`)) return;
+    const { error } = await db.rpc("delete_manager", { p_id: t.id });
+    if (error) return toast(/delete_manager/.test(error.message) ? "Run the latest roles.sql in Supabase first" : error.message);
+    toast("Manager deleted"); return loadTeam();
+  }
+  if (!confirm(t.active ? `Disable ${t.full_name}? They will no longer be able to open the dashboard.` : `Enable ${t.full_name} again?`)) return;
+  const { error } = await db.from("profiles").update({ active: !t.active }).eq("id", t.id);
+  if (error) return toast(error.message);
+  toast(t.active ? "Manager disabled" : "Manager enabled"); loadTeam();
+});
+$("tmAdd").onclick = async () => {
+  if (!isAdmin) return;
+  const name = $("tmName").value.trim(), email = $("tmEmail").value.trim().toLowerCase(), pw = $("tmPass").value;
+  if (!name || !email) return toast("Enter the manager's name and email");
+  if (pw.length < 6) return toast("Password must be at least 6 characters");
+  if (team.some(t => t.email.toLowerCase() === email)) return toast("This email is already on the team");
+  $("tmAdd").disabled = true;
+  try {
+    // Creates the login + manager profile in one step (admin-only database function), so public sign-ups can stay switched off.
+    const { error } = await db.rpc("create_manager", { p_name: name, p_email: email, p_password: pw });
+    if (error) return toast(/create_manager/.test(error.message) ? "Run the latest roles.sql in Supabase first" : error.message);
+    $("tmName").value = $("tmEmail").value = $("tmPass").value = "";
+    toast(`${name} added as manager`); await loadTeam();
+  } finally { $("tmAdd").disabled = false; }
+};
+
+init();
+</script>
+
+<script>
+// ===== Meta Ads Tracker page (added; independent of the other pages) =====
+(() => {
+  const E = id => document.getElementById(id);
+  const today = () => iso(new Date());
+  const us = s => { const [y, m, d] = s.split("-"); return `${+m}/${+d}/${y}`; };
+  const isActive = r => r.start_date <= today() && r.end_date >= today();
+  let rows = [], loaded = false, editId = null, user = null;
+
+  function stampFmt(x) {
+    const d = new Date(x);
+    return String(d.getDate()).padStart(2, "0") + "-" + d.toLocaleString("en-GB", { month: "long" }) + "-" + d.getFullYear() + " " +
+      d.toLocaleTimeString("en-US", { hour: "2-digit", minute: "2-digit", second: "2-digit" });
+  }
+  async function load() {
+    const { data, error } = await db.from("meta_ads").select("*").order("start_date").order("created_at");
+    if (error) { rows = []; toast(/meta_ads/.test(error.message) ? "Run meta_ads.sql in Supabase to enable Meta Ads Tracker" : error.message); }
+    else rows = data;
+    loaded = true; render();
+  }
+  const mxNum = v => (v === null || v === undefined || v === "") ? "–" : +v;
+  const opts = arr => arr.map(x => `<option value="${esc(x)}">`).join("");
+  function render() {
+    const month = E("mxMonth").value || today().slice(0, 7);
+    const clients = [...new Set(rows.map(r => r.client))].sort((a, b) => a.localeCompare(b));
+    const cur = E("mxClient").value;
+    E("mxClient").innerHTML = '<option value="">All clients</option>' + clients.map(c => `<option ${c === cur ? "selected" : ""}>${esc(c)}</option>`).join("");
+    const client = E("mxClient").value;
+    E("mxCliList").innerHTML = opts(clients);
+    const types = [...new Set(rows.map(r => r.campaign_type).filter(Boolean))].sort((a, b) => a.localeCompare(b));
+    const curType = E("mxTypeF").value;
+    E("mxTypeF").innerHTML = '<option value="">All types</option>' + types.map(t => `<option ${t === curType ? "selected" : ""}>${esc(t)}</option>`).join("");
+    const typeF = E("mxTypeF").value, statusF = E("mxStatusF").value;
+    const passF = r => (!typeF || r.campaign_type === typeF) && (!statusF || (isActive(r) ? "Active" : "Inactive") === statusF);
+    E("mxTypeList").innerHTML = opts([...new Set(["Post Boosting", "Engagement", "Awareness", ...rows.map(r => r.campaign_type)].filter(Boolean))]);
+    E("mxCreList").innerHTML = opts([...new Set(["Static", "Carousel", "Reel", "Video", ...rows.map(r => r.creative_type)].filter(Boolean))]);
+
+    const byClient = rows.filter(r => !client || r.client === client);
+    const list = byClient.filter(r => r.start_date <= month + "-31" && r.end_date >= month + "-01" && passF(r));
+    E("mxActive").textContent = byClient.filter(isActive).length;
+    const last = byClient.reduce((m, r) => (!m || r.updated_at > m ? r.updated_at : m), null);
+    E("mxStamp").textContent = last ? stampFmt(last) : "–";
+    E("mxInfo").textContent = `${monthLabel(month)} · ${client || "All clients"}`;
+    E("mxTbl").classList.toggle("mx-all", !client);
+    E("mxEmpty").textContent = "No campaigns for this month. Use “+ Add campaign” to start.";
+    E("mxEmpty").classList.toggle("hidden", list.length > 0);
+    E("mxRows").innerHTML = list.map((r, i) => {
+      const a = isActive(r);
+      return `<tr>
+        <td data-label="S.No.">${i + 1}</td>
+        <td class="act"><button class="mini" data-mxe="${r.id}">Edit</button></td>
+        <td class="mx-cc" data-label="Client">${esc(r.client)}</td>
+        <td data-label="Start Date">${us(r.start_date)}</td>
+        <td data-label="End Date">${us(r.end_date)}</td>
+        <td data-label="Campaign Name">${esc(r.campaign_name)}</td>
+        <td data-label="Campaign Type">${esc(r.campaign_type)}</td>
+        <td class="${a ? "mx-act" : "mx-ina"}" data-label="Status">${a ? "Active" : "Inactive"}</td>
+        <td data-label="Creative Type">${esc(r.creative_type)}</td>
+        <td data-label="Budget/day">${+r.budget_per_day}</td>
+        <td data-label="Results">${r.results ? esc(r.results) : "–"}</td>
+        <td data-label="Cost/Results">${mxNum(r.cost_per_result)}</td>
+        <td data-label="Reach">${mxNum(r.reach)}</td>
+        <td data-label="Impressions">${mxNum(r.impressions)}</td>
+        <td data-label="Amount Spent">${mxNum(r.amount_spent)}</td>
+        <td data-label="CPM">${mxNum(r.cpm)}</td>
+        <td data-label="CPC">${mxNum(r.cpc)}</td>
+        <td data-label="Views">${mxNum(r.views)}</td>
+        <td data-label="Clicks">${mxNum(r.clicks)}</td></tr>`;
+    }).join("") + (list.length ? mxTotal(list) : "");
+  }
+  // total row: plain sum of every row shown (month / client / type / status filters applied)
+  function mxTotal(list) {
+    const sum = k => {
+      const v = list.map(r => r[k]).filter(x => x !== null && x !== undefined && x !== "").map(Number);
+      return v.length ? Math.round(v.reduce((a, b) => a + b, 0) * 100) / 100 : "–";
+    };
+    // CPM = total spend ÷ total impressions × 1,000 ; CPC = total spend ÷ total clicks
+    const ratio = (a, b, m) => { const x = sum(a), y = sum(b); return x === "–" || y === "–" || !(y > 0) ? "–" : Math.round(x / y * m * 100) / 100; };
+    return `<tr class="tot"><td></td><td class="act"></td><td class="mx-cc"></td><td></td><td></td><td class="tot-l">Total</td><td></td><td></td><td></td>
+      <td data-label="Budget/day">${sum("budget_per_day")}</td>
+      <td></td>
+      <td></td>
+      <td data-label="Reach">${sum("reach")}</td>
+      <td data-label="Impressions">${sum("impressions")}</td>
+      <td data-label="Amount Spent">${sum("amount_spent")}</td>
+      <td data-label="CPM">${ratio("amount_spent", "impressions", 1000)}</td>
+      <td data-label="CPC">${ratio("amount_spent", "clicks", 1)}</td>
+      <td data-label="Views">${sum("views")}</td>
+      <td data-label="Clicks">${sum("clicks")}</td></tr>`;
+  }
+
+  // ---- show / hide this page (the other pages' code is not touched) ----
+  function openPage() {
+    ["pagePosts", "pageBoost", "pageTeam", "bar"].forEach(id => E(id).classList.add("hidden"));
+    document.querySelectorAll(".nav").forEach(n => n.classList.remove("on"));
+    E("mxNav").classList.add("on");
+    E("pageMeta").classList.remove("hidden");
+    document.body.classList.add("mx-open");
+    E("pageGoogle").classList.add("hidden"); document.body.classList.remove("gx-open");
+    history.replaceState(null, "", "#meta");
+    closeMenu(); window.scrollTo(0, 0);
+    if (!E("mxMonth").value) E("mxMonth").value = today().slice(0, 7);
+    loaded ? render() : load();
+  }
+  function closePage() {
+    E("pageMeta").classList.add("hidden");
+    document.body.classList.remove("mx-open");
+    E("mxNav").classList.remove("on");
+  }
+  E("mxNav").onclick = openPage;
+  document.querySelectorAll(".nav[data-page]").forEach(n => n.addEventListener("click", closePage));
+  E("logoutBtn").addEventListener("click", () => { closePage(); rows = []; loaded = false; user = null; E("mxClient").value = ""; E("mxTypeF").value = ""; E("mxStatusF").value = ""; });
+
+  function onLogin() {
+    if (E("app").classList.contains("hidden") || typeof me === "undefined" || !me || me === user) return;
+    user = me;
+    if (!E("mxMonth").value) E("mxMonth").value = today().slice(0, 7);
+    if (location.hash === "#meta") openPage();
+  }
+  new MutationObserver(onLogin).observe(E("app"), { attributes: true, attributeFilter: ["class"] });
+  onLogin();
+
+  E("mxMonth").onchange = E("mxClient").onchange = E("mxTypeF").onchange = E("mxStatusF").onchange = render;
+  E("mxPrint").onclick = () => window.print();
+  E("mxExport").onclick = () => {
+    const month = E("mxMonth").value, client = E("mxClient").value, typeF = E("mxTypeF").value, statusF = E("mxStatusF").value;
+    const list = rows.filter(r => (!client || r.client === client) && r.start_date <= month + "-31" && r.end_date >= month + "-01" && (!typeF || r.campaign_type === typeF) && (!statusF || (isActive(r) ? "Active" : "Inactive") === statusF));
+    downloadCsv(`meta-ads-${client || "all-clients"}-${month}.csv`,
+      [["Client", "Start Date", "End Date", "Campaign Name", "Campaign Type", "Status", "Creative Type", "Budget/day", "Results", "Cost/Results", "Reach", "Impressions", "Amount Spent", "CPM", "CPC", "Views", "Clicks"],
+       ...list.map(r => [r.client, us(r.start_date), us(r.end_date), r.campaign_name, r.campaign_type, isActive(r) ? "Active" : "Inactive", r.creative_type, +r.budget_per_day, r.results || "", mxNum(r.cost_per_result) === "–" ? "" : +r.cost_per_result, mxNum(r.reach) === "–" ? "" : +r.reach, mxNum(r.impressions) === "–" ? "" : +r.impressions, mxNum(r.amount_spent) === "–" ? "" : +r.amount_spent, mxNum(r.cpm) === "–" ? "" : +r.cpm, mxNum(r.cpc) === "–" ? "" : +r.cpc, mxNum(r.views) === "–" ? "" : +r.views, mxNum(r.clicks) === "–" ? "" : +r.clicks])]);
+    toast("Exported");
+  };
+
+  // ---- add / edit / delete (admin only; the database enforces it too) ----
+  function openDlg(r) {
+    editId = r ? r.id : null;
+    E("mxDlgTitle").textContent = r ? "Edit campaign" : "Add campaign";
+    E("mxCli").value = r ? r.client : E("mxClient").value;
+    E("mxName").value = r ? r.campaign_name : "";
+    E("mxType").value = r ? r.campaign_type : "";
+    E("mxCre").value = r ? r.creative_type : "";
+    E("mxStart").value = r ? r.start_date : today();
+    E("mxEnd").value = r ? r.end_date : today();
+    E("mxBud").value = r ? +r.budget_per_day : 0;
+    E("mxRes").value = r && r.results ? r.results : "";
+    E("mxCpr").value = r && r.cost_per_result !== null && r.cost_per_result !== undefined ? +r.cost_per_result : "";
+    E("mxReach").value = r && r.reach !== null && r.reach !== undefined ? +r.reach : "";
+    E("mxImp").value = r && r.impressions !== null && r.impressions !== undefined ? +r.impressions : "";
+    E("mxSpent").value = r && r.amount_spent !== null && r.amount_spent !== undefined ? +r.amount_spent : "";
+    E("mxCpm").value = r && r.cpm !== null && r.cpm !== undefined ? +r.cpm : "";
+    E("mxCpc").value = r && r.cpc !== null && r.cpc !== undefined ? +r.cpc : "";
+    E("mxViews").value = r && r.views !== null && r.views !== undefined ? +r.views : "";
+    E("mxClicks").value = r && r.clicks !== null && r.clicks !== undefined ? +r.clicks : "";
+    E("mxDel").classList.toggle("hidden", !r || !isAdmin);
+    E("mxDlg").showModal();
+  }
+  E("mxAdd").onclick = () => openDlg(null);
+  E("mxRows").addEventListener("click", e => {
+    const b = e.target.closest("button[data-mxe]"); if (!b) return;
+    const r = rows.find(x => x.id === b.dataset.mxe); if (r) openDlg(r);
+  });
+  E("mxCancel").onclick = () => E("mxDlg").close();
+  E("mxSave").onclick = async () => {
+    const rec = {
+      client: E("mxCli").value.trim(), campaign_name: E("mxName").value.trim(),
+      campaign_type: E("mxType").value.trim(), creative_type: E("mxCre").value.trim(),
+      start_date: E("mxStart").value, end_date: E("mxEnd").value, budget_per_day: Number(E("mxBud").value)
+    };
+    const mxMet = { results: "mxRes", cost_per_result: "mxCpr", reach: "mxReach", impressions: "mxImp", amount_spent: "mxSpent", cpm: "mxCpm", cpc: "mxCpc", views: "mxViews", clicks: "mxClicks" };
+    for (const k in mxMet) { const v = E(mxMet[k]).value.trim(); rec[k] = v === "" ? null : (k === "results" ? v : Number(v)); }
+    if (!rec.client || !rec.campaign_name) return toast("Enter the client and campaign name");
+    if (!rec.start_date || !rec.end_date) return toast("Enter the start and end dates");
+    if (rec.end_date < rec.start_date) return toast("End date cannot be before the start date");
+    if (!(rec.budget_per_day >= 0)) return toast("Enter a valid budget per day");
+    if (Object.keys(mxMet).some(k => k !== "results" && rec[k] !== null && !(rec[k] >= 0))) return toast("Enter valid numbers for the metrics (Results can be text)");
+    E("mxSave").disabled = true;
+    try {
+      let error;
+      if (editId) ({ error } = await db.from("meta_ads").update({ ...rec, updated_at: new Date().toISOString() }).eq("id", editId));
+      else ({ error } = await db.from("meta_ads").insert(rec));
+      if (error) return toast(/meta_ads/.test(error.message) && /exist|schema/.test(error.message) ? (/column/.test(error.message) ? "Run meta_ads_metrics.sql in Supabase first" : "Run meta_ads.sql in Supabase first") : error.message);
+      E("mxDlg").close(); toast("Campaign saved");
+      // make sure the saved campaign is visible under the current filters
+      if (E("mxClient").value && E("mxClient").value !== rec.client) E("mxClient").value = rec.client;
+      const mo = E("mxMonth").value;
+      if (!(rec.start_date <= mo + "-31" && rec.end_date >= mo + "-01")) E("mxMonth").value = rec.start_date.slice(0, 7);
+      await load();
+      if (rec.client && ![...E("mxClient").options].some(o => o.value === rec.client)) render();
+    } finally { E("mxSave").disabled = false; }
+  };
+  E("mxDel").onclick = async () => {
+    if (!isAdmin || !editId) return;
+    if (!confirm("Delete this campaign permanently?")) return;
+    const { error } = await db.from("meta_ads").delete().eq("id", editId);
+    if (error) return toast(error.message);
+    E("mxDlg").close(); toast("Campaign deleted"); load();
+  };
+})();
+</script>
+
+<script>
+// ===== Google Ads Tracker page (added; independent of the other pages) =====
+(() => {
+  const E = id => document.getElementById(id);
+  const today = () => iso(new Date());
+  const us = s => { const [y, m, d] = s.split("-"); return `${+m}/${+d}/${y}`; };
+  const isActive = r => r.start_date <= today() && r.end_date >= today();
+  let rows = [], loaded = false, editId = null, user = null;
+
+  function stampFmt(x) {
+    const d = new Date(x);
+    return String(d.getDate()).padStart(2, "0") + "-" + d.toLocaleString("en-GB", { month: "long" }) + "-" + d.getFullYear() + " " +
+      d.toLocaleTimeString("en-US", { hour: "2-digit", minute: "2-digit", second: "2-digit" });
+  }
+  async function load() {
+    const { data, error } = await db.from("google_ads").select("*").order("start_date").order("created_at");
+    if (error) { rows = []; toast(/google_ads/.test(error.message) ? "Run google_ads.sql in Supabase to enable Google Ads Tracker" : error.message); }
+    else rows = data;
+    loaded = true; render();
+  }
+  const opts = arr => arr.map(x => `<option value="${esc(x)}">`).join("");
+  const gxNum = v => (v === null || v === undefined || v === "") ? "–" : +v;
+  const gxPct = v => (v === null || v === undefined || v === "") ? "–" : +v + "%";
+  function render() {
+    const month = E("gxMonth").value || today().slice(0, 7);
+    const clients = [...new Set(rows.map(r => r.client))].sort((a, b) => a.localeCompare(b));
+    const cur = E("gxClient").value;
+    E("gxClient").innerHTML = '<option value="">All clients</option>' + clients.map(c => `<option ${c === cur ? "selected" : ""}>${esc(c)}</option>`).join("");
+    const client = E("gxClient").value;
+    E("gxCliList").innerHTML = opts(clients);
+    const types = [...new Set(rows.map(r => r.campaign_type).filter(Boolean))].sort((a, b) => a.localeCompare(b));
+    const curType = E("gxTypeF").value;
+    E("gxTypeF").innerHTML = '<option value="">All types</option>' + types.map(t => `<option ${t === curType ? "selected" : ""}>${esc(t)}</option>`).join("");
+    const typeF = E("gxTypeF").value, statusF = E("gxStatusF").value;
+    const passF = r => (!typeF || r.campaign_type === typeF) && (!statusF || (isActive(r) ? "Active" : "Inactive") === statusF);
+    E("gxTypeList").innerHTML = opts([...new Set(["Search", "Performance Max", "Display", "Video", "Demand Gen", "Shopping", ...rows.map(r => r.campaign_type)].filter(Boolean))]);
+    E("gxCreList").innerHTML = opts([...new Set(["Responsive Search Ad", "Image", "Video", "Shopping", "Text", ...rows.map(r => r.creative_type)].filter(Boolean))]);
+
+    const byClient = rows.filter(r => !client || r.client === client);
+    const list = byClient.filter(r => r.start_date <= month + "-31" && r.end_date >= month + "-01" && passF(r));
+    E("gxActive").textContent = byClient.filter(isActive).length;
+    const last = byClient.reduce((m, r) => (!m || r.updated_at > m ? r.updated_at : m), null);
+    E("gxStamp").textContent = last ? stampFmt(last) : "–";
+    E("gxInfo").textContent = `${monthLabel(month)} · ${client || "All clients"}`;
+    E("gxTbl").classList.toggle("gx-all", !client);
+    E("gxEmpty").textContent = "No campaigns for this month. Use “+ Add campaign” to start.";
+    E("gxEmpty").classList.toggle("hidden", list.length > 0);
+    E("gxRows").innerHTML = list.map((r, i) => {
+      const a = isActive(r);
+      return `<tr>
+        <td data-label="S.No.">${i + 1}</td>
+        <td class="act"><button class="mini" data-gxe="${r.id}">Edit</button></td>
+        <td class="gx-cc" data-label="Client">${esc(r.client)}</td>
+        <td data-label="Start Date">${us(r.start_date)}</td>
+        <td data-label="End Date">${us(r.end_date)}</td>
+        <td data-label="Campaign Name">${esc(r.campaign_name)}</td>
+        <td data-label="Campaign Type">${esc(r.campaign_type)}</td>
+        <td class="${a ? "gx-act" : "gx-ina"}" data-label="Status">${a ? "Active" : "Inactive"}</td>
+        <td data-label="Creative Type">${esc(r.creative_type)}</td>
+        <td data-label="Budget/day">${+r.budget_per_day}</td>
+        <td data-label="Clicks">${gxNum(r.clicks)}</td>
+        <td data-label="Impressions">${gxNum(r.impressions)}</td>
+        <td data-label="Cost">${gxNum(r.cost)}</td>
+        <td data-label="CTR">${gxPct(r.ctr)}</td>
+        <td data-label="Avg. CPC">${gxNum(r.avg_cpc)}</td>
+        <td data-label="Interaction Rate">${gxPct(r.interaction_rate)}</td>
+        <td data-label="Calls">${gxNum(r.calls)}</td>
+        <td data-label="Conversions">${gxNum(r.conversions)}</td></tr>`;
+    }).join("") + (list.length ? gxTotal(list) : "");
+  }
+  // total row: counts and cost are summed; CTR, Avg. CPC and Interaction Rate are worked out
+  // from the totals (a plain sum of percentages / per-click rates would not mean anything)
+  function gxTotal(list) {
+    const n = x => (x === null || x === undefined || x === "") ? null : Number(x);
+    const r2 = x => Math.round(x * 100) / 100;
+    const sum = k => { const v = list.map(r => n(r[k])).filter(x => x !== null); return v.length ? r2(v.reduce((a, b) => a + b, 0)) : "–"; };
+    const tot = (rs, k) => rs.reduce((a, r) => a + n(r[k]), 0);
+    const withBoth = (a, b) => list.filter(r => n(r[a]) !== null && n(r[b]) !== null);
+    const ci = withBoth("clicks", "impressions"), cc = withBoth("cost", "clicks"), ri = withBoth("interaction_rate", "impressions");
+    // CTR = total clicks ÷ total impressions × 100 ; Avg. CPC = total cost ÷ total clicks
+    const tc = sum("clicks"), ti = sum("impressions"), tcost = sum("cost");
+    const ctr = tc !== "–" && ti !== "–" && ti > 0 ? r2(tc / ti * 100) + "%" : "–";
+    const cpc = tcost !== "–" && tc !== "–" && tc > 0 ? r2(tcost / tc) : "–";
+    const ir = ri.length && tot(ri, "impressions") > 0 ? r2(ri.reduce((a, r) => a + n(r.interaction_rate) * n(r.impressions), 0) / tot(ri, "impressions")) + "%" : "–";
+    return `<tr class="tot"><td></td><td class="act"></td><td class="gx-cc"></td><td></td><td></td><td class="tot-l">Total</td><td></td><td></td><td></td>
+      <td data-label="Budget/day">${sum("budget_per_day")}</td>
+      <td data-label="Clicks">${sum("clicks")}</td>
+      <td data-label="Impressions">${sum("impressions")}</td>
+      <td data-label="Cost">${sum("cost")}</td>
+      <td data-label="CTR">${ctr}</td>
+      <td data-label="Avg. CPC">${cpc}</td>
+      <td data-label="Interaction Rate">${ir}</td>
+      <td data-label="Calls">${sum("calls")}</td>
+      <td data-label="Conversions">${sum("conversions")}</td></tr>`;
+  }
+
+  // ---- show / hide this page (the other pages' code is not touched) ----
+  function openPage() {
+    ["pagePosts", "pageBoost", "pageTeam", "bar"].forEach(id => E(id).classList.add("hidden"));
+    document.querySelectorAll(".nav").forEach(n => n.classList.remove("on"));
+    E("gxNav").classList.add("on");
+    E("pageGoogle").classList.remove("hidden");
+    document.body.classList.add("gx-open");
+    E("pageMeta").classList.add("hidden"); document.body.classList.remove("mx-open");
+    history.replaceState(null, "", "#google");
+    closeMenu(); window.scrollTo(0, 0);
+    if (!E("gxMonth").value) E("gxMonth").value = today().slice(0, 7);
+    loaded ? render() : load();
+  }
+  function closePage() {
+    E("pageGoogle").classList.add("hidden");
+    document.body.classList.remove("gx-open");
+    E("gxNav").classList.remove("on");
+  }
+  E("gxNav").onclick = openPage;
+  E("mxNav").addEventListener("click", closePage);
+  document.querySelectorAll(".nav[data-page]").forEach(n => n.addEventListener("click", closePage));
+  E("logoutBtn").addEventListener("click", () => { closePage(); rows = []; loaded = false; user = null; E("gxClient").value = ""; E("gxTypeF").value = ""; E("gxStatusF").value = ""; });
+
+  function onLogin() {
+    if (E("app").classList.contains("hidden") || typeof me === "undefined" || !me || me === user) return;
+    user = me;
+    if (!E("gxMonth").value) E("gxMonth").value = today().slice(0, 7);
+    if (location.hash === "#google") openPage();
+  }
+  new MutationObserver(onLogin).observe(E("app"), { attributes: true, attributeFilter: ["class"] });
+  onLogin();
+
+  E("gxMonth").onchange = E("gxClient").onchange = E("gxTypeF").onchange = E("gxStatusF").onchange = render;
+  E("gxPrint").onclick = () => window.print();
+  E("gxExport").onclick = () => {
+    const month = E("gxMonth").value, client = E("gxClient").value, typeF = E("gxTypeF").value, statusF = E("gxStatusF").value;
+    const list = rows.filter(r => (!client || r.client === client) && r.start_date <= month + "-31" && r.end_date >= month + "-01" && (!typeF || r.campaign_type === typeF) && (!statusF || (isActive(r) ? "Active" : "Inactive") === statusF));
+    downloadCsv(`google-ads-${client || "all-clients"}-${month}.csv`,
+      [["Client", "Start Date", "End Date", "Campaign Name", "Campaign Type", "Status", "Creative Type", "Budget/day", "Clicks", "Impressions", "Cost", "CTR (%)", "Avg. CPC", "Interaction Rate (%)", "Calls", "Conversions"],
+       ...list.map(r => [r.client, us(r.start_date), us(r.end_date), r.campaign_name, r.campaign_type, isActive(r) ? "Active" : "Inactive", r.creative_type, +r.budget_per_day,
+         ...["clicks", "impressions", "cost", "ctr", "avg_cpc", "interaction_rate", "calls", "conversions"].map(k => gxNum(r[k]) === "–" ? "" : +r[k])])]);
+    toast("Exported");
+  };
+
+  // ---- add / edit / delete (admin only; the database enforces it too) ----
+  const gxMet = { clicks: "gxClicks", impressions: "gxImp", cost: "gxCost", ctr: "gxCtr", avg_cpc: "gxCpc", interaction_rate: "gxIr", calls: "gxCalls", conversions: "gxConv" };
+  function openDlg(r) {
+    editId = r ? r.id : null;
+    E("gxDlgTitle").textContent = r ? "Edit campaign" : "Add campaign";
+    E("gxCli").value = r ? r.client : E("gxClient").value;
+    E("gxName").value = r ? r.campaign_name : "";
+    E("gxType").value = r ? r.campaign_type : "";
+    E("gxCre").value = r ? r.creative_type : "";
+    E("gxStart").value = r ? r.start_date : today();
+    E("gxEnd").value = r ? r.end_date : today();
+    E("gxBud").value = r ? +r.budget_per_day : 0;
+    Object.keys(gxMet).forEach(k => { E(gxMet[k]).value = r && r[k] !== null && r[k] !== undefined ? +r[k] : ""; });
+    E("gxDel").classList.toggle("hidden", !r || !isAdmin);
+    E("gxDlg").showModal();
+  }
+  E("gxAdd").onclick = () => openDlg(null);
+  E("gxRows").addEventListener("click", e => {
+    const b = e.target.closest("button[data-gxe]"); if (!b) return;
+    const r = rows.find(x => x.id === b.dataset.gxe); if (r) openDlg(r);
+  });
+  E("gxCancel").onclick = () => E("gxDlg").close();
+  E("gxSave").onclick = async () => {
+    const rec = {
+      client: E("gxCli").value.trim(), campaign_name: E("gxName").value.trim(),
+      campaign_type: E("gxType").value.trim(), creative_type: E("gxCre").value.trim(),
+      start_date: E("gxStart").value, end_date: E("gxEnd").value, budget_per_day: Number(E("gxBud").value)
+    };
+    for (const k in gxMet) { const v = E(gxMet[k]).value.trim(); rec[k] = v === "" ? null : Number(v); }
+    if (!rec.client || !rec.campaign_name) return toast("Enter the client and campaign name");
+    if (!rec.start_date || !rec.end_date) return toast("Enter the start and end dates");
+    if (rec.end_date < rec.start_date) return toast("End date cannot be before the start date");
+    if (!(rec.budget_per_day >= 0)) return toast("Enter a valid budget per day");
+    if (Object.keys(gxMet).some(k => rec[k] !== null && !(rec[k] >= 0))) return toast("Enter valid numbers for the metrics");
+    E("gxSave").disabled = true;
+    try {
+      let error;
+      if (editId) ({ error } = await db.from("google_ads").update({ ...rec, updated_at: new Date().toISOString() }).eq("id", editId));
+      else ({ error } = await db.from("google_ads").insert(rec));
+      if (error) return toast(/google_ads/.test(error.message) && /exist|schema/.test(error.message) ? (/column/.test(error.message) ? "Run google_ads_metrices.sql in Supabase first" : "Run google_ads.sql in Supabase first") : error.message);
+      E("gxDlg").close(); toast("Campaign saved");
+      // make sure the saved campaign is visible under the current filters
+      if (E("gxClient").value && E("gxClient").value !== rec.client) E("gxClient").value = rec.client;
+      const mo = E("gxMonth").value;
+      if (!(rec.start_date <= mo + "-31" && rec.end_date >= mo + "-01")) E("gxMonth").value = rec.start_date.slice(0, 7);
+      await load();
+      if (rec.client && ![...E("gxClient").options].some(o => o.value === rec.client)) render();
+    } finally { E("gxSave").disabled = false; }
+  };
+  E("gxDel").onclick = async () => {
+    if (!isAdmin || !editId) return;
+    if (!confirm("Delete this campaign permanently?")) return;
+    const { error } = await db.from("google_ads").delete().eq("id", editId);
+    if (error) return toast(error.message);
+    E("gxDlg").close(); toast("Campaign deleted"); load();
+  };
+})();
+</script>
+
+<script>
+// ===== Meta and Instagram page (added; fully separate - own tables mi_accounts / mi_posts) =====
+(() => {
+  const E = id => document.getElementById(id);
+  let ac = [], mi = [], user = null, tgt = null, mode = "add", accId = null;
+  const src = k => mi.filter(x => x.channel === k);
+  function stats(id, k, month) {
+    const l = src(k).filter(x => x.account_id === id && x.post_date <= month + "-31");
+    return { last: l.reduce((m, x) => (!m || x.post_date > m ? x.post_date : m), null), total: l.filter(x => x.post_date.startsWith(month)).length };
+  }
+  async function miLoad() {
+    const [a, p] = await Promise.all([db.from("mi_accounts").select("*").order("created_at"), db.from("mi_posts").select("account_id,channel,post_date,created_at")]);
+    if (a.error || p.error) { const m = (a.error || p.error).message; ac = []; mi = []; toast(/mi_accounts|mi_posts/.test(m) ? "Run meta_insta.sql in Supabase to enable Meta and Instagram" : m); }
+    else { ac = a.data; mi = p.data; }
+    render();
+  }
+  const visible = month => ac.filter(a => activeIn(a, month) && (!E("miMgr").value || a.manager === E("miMgr").value) && (!E("miBiz").value || a.name === E("miBiz").value));
+  function render() {
+    const month = E("miMonth").value || iso(new Date()).slice(0, 7), [y, m] = month.split("-");
+    const mon = new Date(+y, +m - 1, 1).toLocaleDateString("en-GB", { month: "short" });
+    E("miTitle").textContent = "Meta and Instagram Updates";
+    E("miThIT").textContent = E("miThMT").textContent = `Total ${mon} Posts`;
+    E("miThST").textContent = `Total ${mon} Instagram Stories`;
+    const mgrs = [...new Set(ac.map(a => a.manager).filter(Boolean))].sort(), cur = E("miMgr").value;
+    E("miMgrList").innerHTML = mgrs.map(x => `<option value="${esc(x)}">`).join("");
+    E("miMgr").innerHTML = '<option value="">All managers</option>' + mgrs.map(x => `<option ${x === cur ? "selected" : ""}>${esc(x)}</option>`).join("");
+    const miBizs = [...new Set(ac.filter(a => activeIn(a, month)).map(a => a.name).filter(Boolean))].sort((x, y) => x.localeCompare(y)), curBiz = E("miBiz").value;
+    E("miBiz").innerHTML = '<option value="">All businesses</option>' + miBizs.map(x => `<option ${x === curBiz ? "selected" : ""}>${esc(x)}</option>`).join("");
+    const last = mi.reduce((a, x) => (!a || x.created_at > a ? x.created_at : a), null);
+    E("miInfo").textContent = `${monthLabel(month)} · ${E("miMgr").value || "All managers"}`;
+    E("miStamp").textContent = last ? new Date(last).toLocaleString("en-GB", { day: "2-digit", month: "long", year: "numeric", hour: "2-digit", minute: "2-digit", second: "2-digit" }) : "–";
+    const list = visible(month), d = new Date(); d.setDate(d.getDate() - STALE_DAYS); const stale = iso(d), isNow = month === iso(new Date()).slice(0, 7);
+    E("miEmpty").textContent = isAdmin ? "No accounts yet. Use “+ Add account” to start." : "No accounts for this month.";
+    E("miEmpty").classList.toggle("hidden", list.length > 0);
+    let iSum = 0, tSum = 0, sSum = 0;
+    E("miRows").innerHTML = list.map(a => {
+      const i = stats(a.id, "insta", month), t = stats(a.id, "meta", month), s = stats(a.id, "story", month);
+      iSum += i.total; tSum += t.total; sSum += s.total;
+      return `<tr>
+        <td class="name ${["pinterest","thread","telegram","youtube","linkedin","instagram","facebook","gmb"].includes(a.grp) ? "g-" + a.grp : a.grp === "red" ? "red" : "blue"}">${esc(a.name)}</td>
+        <td class="${isNow && (!i.last || i.last < stale) ? "stale" : ""}" data-label="Insta last post">${i.last ? fmt(i.last) : "No posts yet"}</td>
+        <td data-label="Insta total">${i.total}</td>
+        <td data-label="Meta last post">${t.last ? fmt(t.last) : "–"}</td>
+        <td data-label="Meta total">${t.total}</td>
+        <td data-label="Instagram stories">${s.total}</td>
+        <td class="mgr" data-label="Manager">${esc(a.manager)}</td>
+        <td class="act"><button class="mini add" data-miadd="${a.id}">+ Add</button><button class="mini" data-miedit="${a.id}" title="Edit last date and totals">Edit</button>${isAdmin ? `<button class="mini" data-miacc="${a.id}" title="Edit account or change manager">Account</button><button class="mini" data-midel="${a.id}" title="Remove from this month onwards">✕</button>` : ""}</td></tr>`;
+    }).join("") + (list.length ? `<tr class="tot"><td class="tlbl" colspan="2">Total</td><td data-label="Total Instagram Posts">${iSum}</td><td></td><td data-label="Total Meta Posts">${tSum}</td><td data-label="Total Instagram Story">${sSum}</td><td colspan="2"></td></tr>` : "");
+  }
+
+  // ---- show / hide this page ----
+  function openPage() {
+    ["pagePosts", "pageBoost", "pageTeam", "bar", "pageMeta", "pageGoogle"].forEach(id => E(id).classList.add("hidden"));
+    document.body.classList.remove("mx-open", "gx-open");
+    document.querySelectorAll(".nav").forEach(n => n.classList.remove("on"));
+    E("miNav").classList.add("on"); E("pageMI").classList.remove("hidden"); document.body.classList.add("mi-open");
+    history.replaceState(null, "", "#metainsta"); closeMenu(); window.scrollTo(0, 0);
+    if (!E("miMonth").value) E("miMonth").value = iso(new Date()).slice(0, 7);
+    render(); miLoad();
+  }
+  function closePage() { E("pageMI").classList.add("hidden"); document.body.classList.remove("mi-open"); E("miNav").classList.remove("on"); }
+  E("miNav").onclick = openPage;
+  ["mxNav", "gxNav"].forEach(id => E(id).addEventListener("click", closePage));
+  document.querySelectorAll(".nav[data-page]").forEach(n => n.addEventListener("click", closePage));
+  E("logoutBtn").addEventListener("click", () => { closePage(); ac = []; mi = []; user = null; E("miMgr").value = ""; E("miBiz").value = ""; });
+  function onLogin() {
+    if (E("app").classList.contains("hidden") || typeof me === "undefined" || !me || me === user) return;
+    user = me; if (!E("miMonth").value) E("miMonth").value = iso(new Date()).slice(0, 7);
+    if (location.hash === "#metainsta") openPage();
+  }
+  new MutationObserver(onLogin).observe(E("app"), { attributes: true, attributeFilter: ["class"] });
+  onLogin();
+
+  E("miMonth").onchange = E("miMgr").onchange = E("miBiz").onchange = render;
+  E("miPrint").onclick = () => window.print();
+  E("miExport").onclick = () => {
+    const month = E("miMonth").value, mon = E("miThIT").textContent.replace("Total ", "").replace(" Posts", "");
+    downloadCsv(`meta-and-instagram-${month}.csv`, [["Business Name", "Insta Last Post", `Total ${mon} Posts`, "Meta Last Post", `Total ${mon} Posts (Meta)`, `Total ${mon} Instagram Stories`, "Account Manager"],
+      ...visible(month).map(a => { const i = stats(a.id, "insta", month), t = stats(a.id, "meta", month), s = stats(a.id, "story", month);
+        return [a.name,  i.last ? fmt(i.last) : "", i.total, t.last ? fmt(t.last) : "", t.total, s.total, a.manager || ""]; })]);
+    toast("Exported");
+  };
+
+  // ---- accounts (admin only; the database enforces it too) ----
+  function openAcc(a) {
+    accId = a ? a.id : null;
+    E("miAccTitle").textContent = a ? `Edit account – ${a.name}` : "Add account";
+    E("miAccName").value = a ? a.name : ""; E("miAccGrp").value = a ? (({blue:"facebook",red:"youtube"})[a.grp] || a.grp) : "facebook"; E("miAccMgr").value = a ? a.manager || "" : "";
+    E("miAccFrom").value = a ? a.start_month || "" : E("miMonth").value; E("miAccUntil").value = a ? a.end_month || "" : "";
+    E("miAccDelPerm").classList.toggle("hidden", !a); E("miAccDlg").showModal();
+  }
+  E("miAddAcc").onclick = () => { if (isAdmin) openAcc(null); };
+  E("miAccCancel").onclick = () => E("miAccDlg").close();
+  E("miAccSave").onclick = async () => {
+    if (!isAdmin) return;
+    const rec = { name: E("miAccName").value.trim(), grp: E("miAccGrp").value, manager: E("miAccMgr").value.trim(), start_month: E("miAccFrom").value || null, end_month: E("miAccUntil").value || null };
+    if (!rec.name) return toast("Enter a business name");
+    if (rec.start_month && rec.end_month && rec.end_month < rec.start_month) return toast("“Active until” must not be before “Active from”");
+    const { error } = accId ? await db.from("mi_accounts").update(rec).eq("id", accId) : await db.from("mi_accounts").insert(rec);
+    if (error) return toast(error.message);
+    E("miAccDlg").close(); toast("Account saved"); miLoad();
+  };
+  E("miAccDelPerm").onclick = async () => {
+    const a = ac.find(x => x.id === accId); if (!a || !confirm(`Permanently delete ${a.name} and all its posts and stories?`)) return;
+    const { error } = await db.from("mi_accounts").delete().eq("id", a.id);
+    error ? toast(error.message) : (E("miAccDlg").close(), toast("Account deleted"), miLoad());
+  };
+
+  // ---- add / edit entries ----
+  const monthEnd = month => { const [y, m] = month.split("-").map(Number), n = new Date(y, m, 1); return n.getFullYear() + "-" + String(n.getMonth() + 1).padStart(2, "0") + "-01"; };
+  function fillEdit() {
+    const s = stats(tgt.id, E("miKind").value, E("miMonth").value);
+    E("miDate").value = s.last && s.last.startsWith(E("miMonth").value) ? s.last : ""; E("miCount").value = s.total || 1;
+  }
+  E("miKind").onchange = () => { if (mode === "edit") fillEdit(); };
+  E("miRows").addEventListener("click", async e => {
+    const b = e.target.closest("button"); if (!b) return;
+    if ((b.dataset.miacc || b.dataset.midel) && !isAdmin) return;   // account-level actions: admin only
+    if (b.dataset.miacc) return openAcc(ac.find(a => a.id === b.dataset.miacc));
+    if (b.dataset.midel) {
+      const a = ac.find(x => x.id === b.dataset.midel), month = E("miMonth").value;
+      if (a.start_month && a.start_month >= month) {
+        if (!confirm(`${a.name} starts in ${monthLabel(a.start_month)}, so removing it from ${monthLabel(month)} would hide it in every month.\n\nDelete it permanently with all its posts?`)) return;
+        const { error } = await db.from("mi_accounts").delete().eq("id", a.id); return error ? toast(error.message) : (toast("Account deleted"), miLoad());
+      }
+      if (!confirm(`Remove ${a.name} from ${monthLabel(month)} onwards?\n\nEarlier months and all its history are kept.`)) return;
+      const { error } = await db.from("mi_accounts").update({ end_month: prevMonth(month) }).eq("id", a.id);
+      return error ? toast(error.message) : (toast(`Removed from ${monthLabel(month)} onwards`), miLoad());
+    }
+    mode = b.dataset.miadd ? "add" : "edit"; tgt = ac.find(a => a.id === (b.dataset.miadd || b.dataset.miedit)); if (!tgt) return;
+    E("miDlgTitle").textContent = `${mode === "add" ? "Add" : "Edit"} – ${tgt.name}`;
+    E("miDateLbl").textContent = mode === "add" ? "Date" : "Last date";
+    E("miCountLbl").textContent = mode === "add" ? "Number of entries" : `Total in ${monthLabel(E("miMonth").value)}`;
+    E("miSave").textContent = mode === "add" ? "Save" : "Save changes";
+    E("miKind").value = "insta";
+    if (mode === "add") { E("miDate").value = dateInMonth(E("miMonth").value); E("miCount").value = 1; } else fillEdit();
+    E("miDlg").showModal();
+  });
+  E("miCancel").onclick = () => E("miDlg").close();
+  E("miSave").onclick = async () => {
+    if (!tgt) return;
+    const k = E("miKind").value, date = E("miDate").value, month = E("miMonth").value;
+    const n = Math.max(1, Math.min(mode === "add" ? 50 : 1000, Math.floor(+E("miCount").value) || 1));
+    if (!date) return toast("Pick a date");
+    const mk = () => ({ account_id: tgt.id, channel: k, post_date: date });
+    E("miSave").disabled = true;
+    try {
+      if (mode === "add") {
+        const { error } = await db.from("mi_posts").insert(Array.from({ length: n }, mk));
+        if (error) return toast(error.message);
+      } else {
+        const s = stats(tgt.id, k, month);
+        if (!s.last || !s.last.startsWith(month)) return toast(`No entries in ${monthLabel(month)} yet – use + Add`);
+        const cur = await db.from("mi_posts").select("id,post_date").eq("account_id", tgt.id).eq("channel", k).gte("post_date", month + "-01").lt("post_date", monthEnd(month));
+        if (cur.error) return toast(cur.error.message);
+        const rs = cur.data.map(r => ({ id: r.id, d: r.post_date })), mv = rs.filter(r => r.d === s.last).map(r => r.id);
+        if (date !== s.last && mv.length) {
+          const up = await db.from("mi_posts").update({ post_date: date }).in("id", mv); if (up.error) return toast(up.error.message);
+          rs.forEach(r => { if (mv.includes(r.id)) r.d = date; });
+        }
+        if (n > rs.length) { const ins = await db.from("mi_posts").insert(Array.from({ length: n - rs.length }, mk)); if (ins.error) toast(ins.error.message); }
+        else if (n < rs.length) { const del = await db.from("mi_posts").delete().in("id", rs.sort((a, b) => (a.d < b.d ? -1 : a.d > b.d ? 1 : 0)).slice(0, rs.length - n).map(r => r.id)); if (del.error) toast(del.error.message); }
+      }
+      E("miDlg").close(); toast("Saved"); miLoad();
+    } finally { E("miSave").disabled = false; }
+  };
+})();
+</script>
+
+<script>
+// ===== Change History page (added; admin only; independent of the other pages) =====
+(() => {
+  const E = id => document.getElementById(id);
+  const ACT = { INSERT: "Added", UPDATE: "Edited", DELETE: "Deleted" };
+  const MAX_ROWS = 2000;
+  let rows = [], user = null, shownGroups = [];
+  // Undo is offered for these tables only (posts, boosts, Meta & Instagram entries, Meta Ads and Google Ads campaigns)
+  const UNDO_TABLES = ["posts", "boosts", "mi_posts", "meta_ads", "google_ads"];
+  const SKIP_COLS = ["updated_at", "created_at"];
+
+  function stampFmt(x) {
+    const d = new Date(x);
+    return String(d.getDate()).padStart(2, "0") + "-" + d.toLocaleString("en-GB", { month: "long" }) + "-" + d.getFullYear() + " " +
+      d.toLocaleTimeString("en-US", { hour: "2-digit", minute: "2-digit", second: "2-digit" });
+  }
+
+  async function load() {
+    if (!isAdmin) return;
+    const month = E("chMonth").value, out = [];
+    for (let from = 0; from < 20000; from += 1000) {
+      let q = db.from("change_history").select("*").order("changed_at", { ascending: false }).order("id", { ascending: false }).range(from, from + 999);
+      if (month) {
+        const [y, m] = month.split("-");
+        q = q.gte("changed_at", new Date(+y, +m - 1, 1).toISOString()).lt("changed_at", new Date(+y, +m, 1).toISOString());
+      }
+      const { data, error } = await q;
+      if (error) {
+        rows = []; render();
+        return toast(/change_history/.test(error.message) ? "Run change_history.sql in Supabase to enable Change History" : error.message);
+      }
+      out.push(...data);
+      if (data.length < 1000) break;
+    }
+    rows = out; render();
+  }
+
+  function fillSelect(id, label, values, show) {
+    const el = E(id), cur = el.value;
+    el.innerHTML = `<option value="">${label}</option>` + values.map(v => `<option value="${esc(v)}" ${v === cur ? "selected" : ""}>${esc(show ? show(v) : v)}</option>`).join("");
+  }
+  const filtered = () => rows.filter(r => (!E("chUser").value || r.user_name === E("chUser").value) &&
+    (!E("chSect").value || r.section === E("chSect").value) && (!E("chAct").value || r.action === E("chAct").value));
+
+  function render() {
+    const month = E("chMonth").value;
+    fillSelect("chUser", "All users", [...new Set(rows.map(r => r.user_name).filter(Boolean))].sort((a, b) => a.localeCompare(b)));
+    fillSelect("chSect", "All pages", [...new Set(rows.map(r => r.section).filter(Boolean))].sort((a, b) => a.localeCompare(b)));
+    const list = filtered();
+    E("chInfo").textContent = `${month ? monthLabel(month) : "All time"} · ${E("chUser").value || "All users"}`;
+    E("chCount").textContent = list.length;
+    E("chStamp").textContent = rows.length ? stampFmt(rows[0].changed_at) : "–";
+    E("chEmpty").classList.toggle("hidden", list.length > 0);
+
+    // a bulk add / delete (e.g. 10 posts at once) is shown as one line
+    const groups = [];
+    list.forEach(r => {
+      const g = groups[groups.length - 1];
+      if (g && r.action !== "UPDATE" && g.r.action === r.action && g.r.user_name === r.user_name && g.r.table_name === r.table_name &&
+          g.r.business === r.business && Math.abs(new Date(g.r.changed_at) - new Date(r.changed_at)) <= 10000) g.items.push(r);
+      else groups.push({ r, items: [r] });
+    });
+    const shown = groups.slice(0, MAX_ROWS);
+    shownGroups = shown;
+    E("chRows").innerHTML = shown.map((g, gi) => {
+      const r = g.r, n = g.items.length;
+      const all = g.items.map(x => x.summary).join("\n");
+      const text = n > 1 ? g.items.slice(0, 3).map(x => x.summary).join("; ") + (n > 3 ? ` … (+${n - 3} more)` : "") : (r.summary || "");
+      return `<tr>
+        <td class="ch-t" data-label="Date &amp; Time">${stampFmt(r.changed_at)}</td>
+        <td data-label="Changed By">${esc(r.user_name || "–")}</td>
+        <td data-label="Page">${esc(r.section || "–")}</td>
+        <td data-label="Business">${esc(r.business || "–")}</td>
+        <td class="ch-a-${esc(r.action)}" data-label="Action">${ACT[r.action] || esc(r.action)}</td>
+        <td class="ch-w" data-label="What Changed" title="${esc(all)}">${esc(text)}</td>
+        <td data-label="Undo">${UNDO_TABLES.includes(r.table_name) ? `<button type="button" class="ch-undo" data-gi="${gi}" title="Reverse this change">Undo</button>` : "–"}</td></tr>`;
+    }).join("") + (groups.length > MAX_ROWS ? `<tr><td class="ch-note" colspan="7">Showing the latest ${MAX_ROWS} entries – pick a month to see older ones.</td></tr>` : "");
+  }
+
+  // ---- show / hide this page ----
+  function openPage() {
+    if (!isAdmin) return;
+    ["pagePosts", "pageBoost", "pageTeam", "bar", "pageMeta", "pageGoogle", "pageMI"].forEach(id => E(id).classList.add("hidden"));
+    document.body.classList.remove("mx-open", "gx-open", "mi-open");
+    document.querySelectorAll(".nav").forEach(n => n.classList.remove("on"));
+    E("chNav").classList.add("on"); E("pageCH").classList.remove("hidden"); document.body.classList.add("ch-open");
+    history.replaceState(null, "", "#changes"); closeMenu(); window.scrollTo(0, 0);
+    render(); load();
+  }
+  function closePage() { E("pageCH").classList.add("hidden"); document.body.classList.remove("ch-open"); E("chNav").classList.remove("on"); }
+  E("chNav").onclick = openPage;
+  ["miNav", "mxNav", "gxNav"].forEach(id => E(id).addEventListener("click", closePage));
+  document.querySelectorAll(".nav[data-page]").forEach(n => n.addEventListener("click", closePage));
+  E("logoutBtn").addEventListener("click", () => {
+    closePage(); rows = []; user = null;
+    E("chMonth").value = ""; E("chUser").value = ""; E("chSect").value = ""; E("chAct").value = "";
+  });
+  function onLogin() {
+    if (E("app").classList.contains("hidden") || typeof me === "undefined" || !me || me === user) return;
+    user = me;
+    E("chNav").classList.toggle("hidden", !isAdmin);
+    if (!isAdmin) return;
+    if (!E("chMonth").value) E("chMonth").value = iso(new Date()).slice(0, 7);
+    if (location.hash === "#changes") openPage();
+  }
+  new MutationObserver(onLogin).observe(E("app"), { attributes: true, attributeFilter: ["class"] });
+  onLogin();
+
+  // ---- Undo: reverse one entry of the change log ----
+  const same = (a, b) => {
+    if (a == null && b == null) return true;
+    if (a == null || b == null) return false;
+    if (typeof a === "number" || typeof b === "number") return Number(a) === Number(b);
+    if (typeof a === "object" || typeof b === "object") return JSON.stringify(a) === JSON.stringify(b);
+    return a === b;
+  };
+  const clip = (v, n = 60) => { const t = v == null || v === "" ? "–" : (typeof v === "object" ? JSON.stringify(v) : String(v)); return t.length > n ? t.slice(0, n) + "…" : t; };
+  const pretty = k => k.replace(/_/g, " ");
+
+  async function undoGroup(g, btn) {
+    if (!isAdmin) return;
+    const items = g.items, first = items[0], tbl = first.table_name, act = first.action;
+    if (!UNDO_TABLES.includes(tbl)) return;
+    btn.disabled = true;
+    try {
+      // 1. look at the records as they are right now
+      const ids = items.map(r => r.record_id).filter(Boolean);
+      const cur = await db.from(tbl).select("*").in("id", ids);
+      if (cur.error) return alert(cur.error.message);
+      const byId = new Map(cur.data.map(x => [String(x.id), x]));
+      const todo = [], why = [];
+      items.forEach(r => {
+        const row = byId.get(String(r.record_id));
+        if (act === "INSERT") {
+          if (!row) why.push("It has already been removed.");
+          else if (Object.keys(r.new_data || {}).some(k => !SKIP_COLS.includes(k) && !same(row[k], r.new_data[k]))) why.push("It was changed after it was added – undo the later change first.");
+          else todo.push({ r, row });
+        } else if (act === "DELETE") {
+          if (row) why.push("It already exists again.");
+          else if (!r.old_data) why.push("The deleted data is not available.");
+          else todo.push({ r });
+        } else {
+          const o = r.old_data || {}, n = r.new_data || {};
+          const cols = Object.keys(n).filter(k => !SKIP_COLS.includes(k) && !same(o[k], n[k]));
+          if (!row) why.push("This record no longer exists.");
+          else if (!cols.length) why.push("There is nothing to restore.");
+          else if (cols.some(k => !same(row[k], n[k]))) why.push("It was changed again after this edit – undo the later change first.");
+          else todo.push({ r, row, cols });
+        }
+      });
+      if (!todo.length) return alert("This can't be undone.\n\n" + [...new Set(why)].join("\n"));
+
+      // 2. confirmation message
+      const where = [first.section, first.business].filter(Boolean).join(" · ");
+      const list = todo.slice(0, 3).map(t => "• " + (t.r.summary || "")).join("\n") + (todo.length > 3 ? `\n• … and ${todo.length - 3} more` : "");
+      let msg;
+      if (act === "INSERT") msg = `Undo this addition?\n\n${where}\n${list}\n\nThis will remove ${todo.length === 1 ? "this entry" : "these " + todo.length + " entries"} from the dashboard.`;
+      else if (act === "DELETE") msg = `Undo this deletion?\n\n${where}\n${list}\n\nThis will put ${todo.length === 1 ? "this entry" : "these " + todo.length + " entries"} back in the dashboard.`;
+      else msg = `Undo this edit?\n\n${where}\n` + todo[0].cols.map(k => `• ${pretty(k)}: ${clip(todo[0].row[k])} → ${clip(todo[0].r.old_data[k])}`).join("\n") + "\n\nOnly the fields listed above will be restored.";
+      if (why.length) msg += `\n\nNote: ${why.length} of ${items.length} cannot be undone (${[...new Set(why)].join(" ")})`;
+      if (!confirm(msg)) return;
+
+      // 3. reverse it
+      let res;
+      if (act === "INSERT") res = await db.from(tbl).delete().in("id", todo.map(t => t.r.record_id)).select("id");
+      else if (act === "DELETE") res = await db.from(tbl).insert(todo.map(t => t.r.old_data)).select("id");
+      else {
+        const t = todo[0], patch = {};
+        t.cols.forEach(k => { patch[k] = t.r.old_data[k]; });
+        res = await db.from(tbl).update(patch).eq("id", t.r.record_id).select("id");
+      }
+      if (res.error) return alert(res.error.message);
+      if (!res.data || res.data.length < todo.length) {
+        await load();
+        return alert("Not everything could be undone (the entry may have been changed meanwhile, or you don't have permission). Please check the page.");
+      }
+      toast("Undone");
+      await load();
+      // keep the other pages in step with the database
+      if (tbl === "posts" || tbl === "boosts") { if (typeof window.load === "function") window.load(); }
+      else if (tbl === "meta_ads" || tbl === "google_ads") { toast("Undone – refreshing the page"); setTimeout(() => location.reload(), 1200); }
+    } finally { btn.disabled = false; }
+  }
+  E("chRows").addEventListener("click", e => {
+    const b = e.target.closest(".ch-undo"); if (!b) return;
+    const g = shownGroups[+b.dataset.gi]; if (g) undoGroup(g, b);
+  });
+
+  E("chMonth").onchange = load;
+  E("chUser").onchange = E("chSect").onchange = E("chAct").onchange = render;
+  E("chExport").onclick = () => {
+    const month = E("chMonth").value;
+    downloadCsv(`change-history-${month || "all-time"}.csv`,
+      [["Date & Time", "Changed By", "Email", "Page", "Business", "Action", "What Changed"],
+       ...filtered().map(r => [stampFmt(r.changed_at), r.user_name || "", r.user_email || "", r.section || "", r.business || "", ACT[r.action] || r.action, r.summary || ""])]);
+    toast("Exported");
+  };
+})();
+</script>
+<script>
+// ===== Important notifications (added; read-only, independent of the other pages) =====
+(() => {
+  const POST_DAYS = 3, BOOST_DAYS = 3, ADS_DAYS = 3, EVENT_DAYS = 7, STORY_DAYS = 1;   // change these numbers to tune the alerts
+  const E = id => document.getElementById(id);
+  const today = () => iso(new Date());
+  const shift = n => { const x = new Date(); x.setDate(x.getDate() + n); return iso(x); };
+  const ago = d => Math.round((new Date(today() + "T00:00:00") - new Date(d + "T00:00:00")) / 864e5);
+  const plural = n => n + (n === 1 ? " day" : " days");
+  const when = x => new Date(x).toLocaleString("en-GB", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" });
+  let user = null, secs = [], loading = false, loadedOnce = false, stamp = null, token = 0, view = "unread", store = {}, histMissing = false;
+
+  // ---- read / unread memory (per login, saved in this browser) ----
+  const skey = () => "be_nt_read_" + (user && user.id ? user.id : "x");
+  function loadStore() { try { store = JSON.parse(localStorage.getItem(skey()) || "{}") || {}; } catch (e) { store = {}; } }
+  function saveStore() { try { localStorage.setItem(skey(), JSON.stringify(store)); } catch (e) { /* storage blocked: keep in memory only */ } }
+  // Task alerts (posts / boosts / campaigns) count as read only for today, so they come back until the task is done.
+  // Event alerts (manager added / dashboard changes) stay read once marked.
+  const isRead = it => it.task ? store[it.id] === today() : !!store[it.id];
+  const markRead = it => { store[it.id] = it.task ? today() : 1; };
+  const allItems = () => secs.flatMap(s => s.items.map(it => ({ ...it, sec: s.key })));
+  const unreadCount = () => allItems().filter(it => !isRead(it)).length;
+
+  // ---- build the alert list ----
+  async function staleList(list, table, col, days, what, empty, channel, idp) {
+    if (!list.length) return [];
+    let q = db.from(table).select("account_id").gte(col, shift(-(days - 1)));
+    if (channel) q = Array.isArray(channel) ? q.in("channel", channel) : q.eq("channel", channel);
+    const r = await q; if (r.error) return null;
+    const fresh = new Set(r.data.map(x => x.account_id));
+    const stale = list.filter(a => !fresh.has(a.id));
+    const lasts = await Promise.all(stale.map(async a => {
+      let q2 = db.from(table).select(col).eq("account_id", a.id);
+      if (channel) q2 = Array.isArray(channel) ? q2.in("channel", channel) : q2.eq("channel", channel);
+      const x = await q2.order(col, { ascending: false }).limit(1);
+      return x.error ? undefined : (x.data[0] ? x.data[0][col] : null);
+    }));
+    return stale.map((a, i) => {
+      const l = lasts[i], d = l ? ago(l) : null;
+      return {
+        id: (idp || (table === "posts" ? "post:" : table === "mi_posts" ? "mi:" : "boost:")) + a.id, task: true, name: a.name,
+        text: l ? `Last ${what} was ${plural(d)} ago (${fmt(l)})` : l === null ? empty : `No ${what} in the last ${days} days`,
+        meta: a.manager ? "Manager: " + a.manager : "", tone: (l === null || d >= 7) ? "hi" : "warn", sort: l ? -d : -9999
+      };
+    }).sort((x, y) => x.sort - y.sort);
+  }
+  function adItems(rows, prefix) {
+    const t = today();
+    return rows.filter(r => r.start_date <= t).map(r => {
+      const left = -ago(r.end_date);
+      return {
+        id: prefix + r.id, task: true, name: r.client + " – " + r.campaign_name,
+        text: left <= 0 ? "Campaign ends TODAY" : left === 1 ? "Campaign ends tomorrow" : `Campaign ends in ${left} days`,
+        meta: `${r.campaign_type || "Campaign"} · ${fmt(r.start_date)} – ${fmt(r.end_date)}`, tone: left <= 1 ? "hi" : "warn", sort: left
+      };
+    }).sort((x, y) => x.sort - y.sort);
+  }
+  async function compute() {
+    const t = today(), cm = t.slice(0, 7), out = []; let ok = true;
+    histMissing = false;
+    const [acc, ma, ga] = await Promise.all([
+      db.from("accounts").select("id,name,manager,social,boosting,start_month,end_month"),
+      db.from("meta_ads").select("id,client,campaign_name,campaign_type,start_date,end_date").gte("end_date", t).lte("end_date", shift(ADS_DAYS)),
+      db.from("google_ads").select("id,client,campaign_name,campaign_type,start_date,end_date").gte("end_date", t).lte("end_date", shift(ADS_DAYS))
+    ]);
+    if (acc.data) {
+      const pl = await staleList(acc.data.filter(a => a.social !== false && activeIn(a, cm)), "posts", "post_date", POST_DAYS, "post", "No posts logged yet", "main");
+      if (pl) out.push({ key: "posts", title: `Reels & Posts – not posted for ${POST_DAYS}+ days`, items: pl }); else ok = false;
+      const bl = await staleList(acc.data.filter(a => a.boosting && activeIn(a, cm)), "boosts", "boost_date", BOOST_DAYS, "boost", "No boosts logged yet");
+      if (bl) out.push({ key: "boost", title: `Meta Boosting – not boosted for ${BOOST_DAYS}+ days`, items: bl }); else ok = false;
+    } else ok = false;
+    const mia = await db.from("mi_accounts").select("id,name,manager,start_month,end_month");   // Meta and Instagram page
+    if (mia.data) {
+      const ml = await staleList(mia.data.filter(a => activeIn(a, cm)), "mi_posts", "post_date", POST_DAYS, "post", "No posts logged yet", ["insta", "meta"]);
+      if (ml) out.push({ key: "mi", title: `Meta and Instagram – not posted for ${POST_DAYS}+ days`, items: ml }); else ok = false;
+      const sl = await staleList(mia.data.filter(a => activeIn(a, cm)), "mi_posts", "post_date", STORY_DAYS, "story", "No stories logged yet", "story", "mis:");   // Instagram stories
+      if (sl) out.push({ key: "mi", title: "Instagram Stories – not posted today", items: sl }); else ok = false;
+    } else if (!/mi_accounts|mi_posts/.test((mia.error && mia.error.message) || "")) ok = false;   // page not set up yet: skip quietly
+    if (ma.data) out.push({ key: "meta", title: "Meta Ads – campaigns ending soon", items: adItems(ma.data, "mx:") }); else ok = false;
+    if (ga.data) out.push({ key: "google", title: "Google Ads – campaigns ending soon", items: adItems(ga.data, "gx:") }); else ok = false;
+
+    if (isAdmin) {                                  // manager + change alerts come from Change History (admin only)
+      const since = new Date(); since.setDate(since.getDate() - EVENT_DAYS);
+      const h = await db.from("change_history").select("id,changed_at,user_name,action,section,table_name,business,summary")
+        .gte("changed_at", since.toISOString()).order("changed_at", { ascending: false }).limit(60);
+      let team = [], changes = [];
+      if (!h.error) {
+        h.data.forEach(x => {
+          if (x.table_name === "profiles" && x.action === "INSERT")
+            team.push({ id: "ch:" + x.id, task: false, name: x.business || "New manager", text: "New manager added", meta: `Added by ${x.user_name || "admin"} · ${when(x.changed_at)}`, tone: "info" });
+          else
+            changes.push({ id: "ch:" + x.id, task: false, name: x.business || x.section || "Dashboard", text: x.summary || (x.action + " " + x.table_name),
+              meta: `${x.user_name || "Unknown"} · ${x.section || x.table_name} · ${when(x.changed_at)}`, tone: x.action === "DELETE" ? "hi" : "info" });
+        });
+        out.push({ key: "team", title: "New manager added", items: team });
+        out.push({ key: "changes", title: `Dashboard changes (last ${EVENT_DAYS} days)`, items: changes });
+      } else {
+        histMissing = true;                         // Change History not set up: still show newly added managers
+        const p = await db.from("profiles").select("id,full_name,role,created_at").eq("role", "manager").gte("created_at", since.toISOString()).order("created_at", { ascending: false });
+        if (!p.error) out.push({ key: "team", title: "New manager added", items: p.data.map(x => ({ id: "pf:" + x.id, task: false, name: x.full_name, text: "New manager added", meta: when(x.created_at), tone: "info" })) });
+      }
+    }
+    return { out, ok };
+  }
+
+  // ---- badge + panel ----
+  function badge() {
+    const b = E("ntBadge"), n = unreadCount();
+    b.classList.toggle("hidden", !loadedOnce);
+    b.textContent = n > 99 ? "99+" : n;
+    b.classList.toggle("zero", n === 0);
+    E("ntBell").title = n ? n + " unread alert" + (n === 1 ? "" : "s") : "Important notifications – nothing unread";
+  }
+  function panel() {
+    const pop = E("ntPop"); if (!pop) return;
+    const keep = pop.querySelector(".nt-body"), top = keep ? keep.scrollTop : 0;
+    const items = allItems(), u = items.filter(it => !isRead(it)).length;
+    let body;
+    if (loading && !loadedOnce) body = '<div class="nt-load">Checking posts, boosting, ads and changes…</div>';
+    else {
+      const showAll = view === "all";
+      const parts = secs.map(sec => {
+        const list = sec.items.filter(it => showAll || !isRead(it));
+        if (!list.length) return "";
+        return `<div class="nt-sec"><div class="nt-sech"><span>${esc(sec.title)}</span><span class="c">${list.length}</span></div>
+          ${list.map(it => { const r = isRead(it); return `<div class="nt-item ${r ? "rd" : it.tone}" data-go="${esc(sec.key)}">
+            <div class="tx"><span class="n">${esc(it.name)}</span><span class="t">${esc(it.text)}</span>${it.meta ? `<span class="m">${esc(it.meta)}</span>` : ""}</div>
+            ${r ? `<span class="nt-tag">✓ Read${it.task ? " · returns tomorrow" : ""}</span>` : `<button class="nt-rdbtn" data-read="${esc(it.id)}">Mark as read</button>`}</div>`; }).join("")}</div>`;
+      }).join("");
+      body = parts || (items.length
+        ? '<div class="nt-empty">✓ You’re all caught up.<small>Post, boost and campaign alerts come back tomorrow if the task is still pending.</small></div>'
+        : '<div class="nt-empty">✓ All clear – nothing needs attention right now.</div>');
+    }
+    pop.innerHTML = `<div class="nt-head"><div><b>Important notifications</b><div class="nt-sub">${u} unread${stamp ? " · updated " + stamp : ""}</div></div>
+        <div class="nt-btns"><button id="ntAllRd" ${u ? "" : "disabled"}>Mark all as read</button><button id="ntRef">${loading ? "Refreshing…" : "Refresh"}</button></div></div>
+      <div class="nt-tabs"><button class="nt-tab ${view === "unread" ? "on" : ""}" data-tab="unread">Unread (${u})</button><button class="nt-tab ${view === "all" ? "on" : ""}" data-tab="all">All (${items.length})</button></div>
+      <div class="nt-body">${body}</div>`;
+    const nb = pop.querySelector(".nt-body"); if (nb) nb.scrollTop = top;
+  }
+  async function refresh() {
+    if (loading || !user) return;
+    loading = true; const my = ++token; panel();
+    try {
+      const { out, ok } = await compute();
+      if (my !== token || !user) return;
+      secs = out; loadedOnce = true;
+      if (ok) {                                     // forget read-marks of alerts that no longer exist
+        const ids = new Set(allItems().map(it => it.id));
+        Object.keys(store).forEach(k => { if (!ids.has(k)) delete store[k]; }); saveStore();
+      }
+      stamp = new Date().toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit" });
+    } catch (e) { /* keep the previous alerts */ }
+    finally { loading = false; badge(); panel(); }
+  }
+
+  function place() {
+    const pop = E("ntPop"); if (!pop) return;
+    const r = E("ntBell").getBoundingClientRect();
+    const vw = document.documentElement.clientWidth || window.innerWidth, w = pop.offsetWidth;
+    pop.style.top = Math.min(r.bottom + 8, window.innerHeight - 120) + "px";
+    pop.style.left = Math.max(8, Math.min(r.right - w, vw - w - 8)) + "px";
+    pop.style.right = "auto";
+  }
+  function close() { const p = E("ntPop"); if (p) p.remove(); E("ntBell").classList.remove("on"); }
+  function open() {
+    close();
+    const pop = document.createElement("div"); pop.className = "nt-pop"; pop.id = "ntPop";
+    document.body.appendChild(pop); E("ntBell").classList.add("on");
+    panel(); place(); refresh();
+  }
+  E("ntBell").onclick = e => { e.stopPropagation(); E("ntPop") ? close() : open(); };
+  document.addEventListener("click", e => {
+    const pop = E("ntPop"); if (!pop) return;
+    if (!e.target.closest("#ntPop")) { close(); return; }
+    if (e.target.closest("#ntRef")) { refresh(); return; }
+    if (e.target.closest("#ntAllRd")) { allItems().forEach(markRead); saveStore(); badge(); panel(); return; }
+    const tab = e.target.closest("[data-tab]");
+    if (tab) { view = tab.dataset.tab; panel(); return; }
+    const rd = e.target.closest("[data-read]");
+    if (rd) { const it = allItems().find(x => x.id === rd.dataset.read); if (it) { markRead(it); saveStore(); badge(); panel(); } return; }
+    const go = e.target.closest("[data-go]");
+    if (go) {
+      const k = go.dataset.go; close();
+      const nav = k === "posts" ? '.nav[data-page="posts"]' : k === "boost" ? '.nav[data-page="boost"]' : k === "mi" ? "#miNav" : k === "meta" ? "#mxNav" : k === "google" ? "#gxNav" : k === "team" ? '.nav[data-page="team"]' : "#chNav";
+      const n = document.querySelector(nav); if (n) n.click();
+    }
+  });
+  document.addEventListener("keydown", e => { if (e.key === "Escape") close(); });
+  window.addEventListener("resize", place);
+  window.addEventListener("focus", () => { if (user) refresh(); });
+  setInterval(() => { if (user) refresh(); }, 5 * 60 * 1000);
+
+  E("logoutBtn").addEventListener("click", () => { close(); user = null; secs = []; store = {}; loadedOnce = false; stamp = null; token++; loading = false; view = "unread"; badge(); });
+  function onLogin() {
+    if (E("app").classList.contains("hidden") || typeof me === "undefined" || !me || me === user) return;
+    user = me; loadStore(); loadedOnce = false; badge(); refresh();
+  }
+  new MutationObserver(onLogin).observe(E("app"), { attributes: true, attributeFilter: ["class"] });
+  onLogin();
+})();
+</script>
+</body>
+</html>
